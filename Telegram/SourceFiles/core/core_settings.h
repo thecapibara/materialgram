@@ -837,6 +837,12 @@ public:
 	[[nodiscard]] rpl::producer<bool> birthDateEnabledChanges() const {
 		return _birthDateEnabled.changes();
 	}
+	void setBypassNoForwards(bool value) {
+		writePref<bool>("bypass_noforwards", value);
+	}
+	[[nodiscard]] bool bypassNoForwards() const {
+		return readPref<bool>("bypass_noforwards", true);
+	}
 	void setDatacenterEnabled(bool value) {
 		_datacenterEnabled = value;
 	}

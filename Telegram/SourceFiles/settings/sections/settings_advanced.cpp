@@ -1352,6 +1352,23 @@ void BuildMaterialgramSection(SectionBuilder &builder) {
 		});
 	}
 
+	const auto bypassNoForwards = builder.addButton({
+		.id = u"advanced/materialgram_bypass_noforwards"_q,
+		.title = rpl::single(u"Allow saving restricted media & copying text"_q),
+		.st = &st::settingsButtonNoIcon,
+		.toggled = rpl::single(settings->bypassNoForwards()),
+		.keywords = { u"bypass"_q, u"save"_q, u"forward"_q, u"restricted"_q },
+	});
+	if (bypassNoForwards) {
+		bypassNoForwards->toggledValue(
+		) | rpl::filter([=](bool enabled) {
+			return (enabled != settings->bypassNoForwards());
+		}) | rpl::on_next([=](bool enabled) {
+			settings->setBypassNoForwards(enabled);
+			Core::App().saveSettingsDelayed();
+		}, bypassNoForwards->lifetime());
+	}
+
 	const auto registration = builder.addButton({
 		.id = u"advanced/materialgram_registration"_q,
 		.title = tr::lng_materialgram_info_registration(),

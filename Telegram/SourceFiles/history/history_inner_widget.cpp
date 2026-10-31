@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_polls.h"
 #include "chat_helpers/stickers_emoji_pack.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "core/file_utilities.h"
 #include "core/click_handler_types.h"
 #include "core/phone_click_handler.h"
@@ -99,6 +100,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "menu/menu_timecode_action.h"
 #include "menu/menu_sponsored.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "apiwrap.h"
 #include "api/api_attached_stickers.h"
 #include "api/api_suggest_post.h"
@@ -3913,6 +3915,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 }
 
 bool HistoryInner::hasCopyRestriction(HistoryItem *item) const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	return !_peer->allowsForwarding() || (item && item->forbidsForward());
 }
 

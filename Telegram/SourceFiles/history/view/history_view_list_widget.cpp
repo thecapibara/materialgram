@@ -2117,16 +2117,25 @@ bool ListWidget::isEmpty() const {
 }
 
 bool ListWidget::hasCopyRestriction(HistoryItem *item) const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	return _delegate->listCopyRestrictionType(item)
 		!= CopyRestrictionType::None;
 }
 
 bool ListWidget::hasCopyMediaRestriction(not_null<HistoryItem*> item) const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	return _delegate->listCopyMediaRestrictionType(item)
 		!= CopyRestrictionType::None;
 }
 
 bool ListWidget::showCopyRestriction(HistoryItem *item) {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	const auto type = _delegate->listCopyRestrictionType(item);
 	if (type == CopyRestrictionType::None) {
 		return false;

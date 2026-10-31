@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "media/audio/media_audio.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "wallet/wallet_address.h"
 #include "wallet/wallet_fiat.h"
 #include "wallet/wallet_panel.h"
@@ -3443,10 +3444,16 @@ bool HistoryItem::canStopPoll() const {
 }
 
 bool HistoryItem::forbidsForward() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	return (_flags & MessageFlag::NoForwards);
 }
 
 bool HistoryItem::forbidsSaving() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	if (forbidsForward()) {
 		return true;
 	} else if (_media && _media->ttlSeconds()) {
