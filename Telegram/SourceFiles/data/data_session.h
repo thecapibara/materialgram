@@ -605,6 +605,11 @@ public:
 		PeerId peerId,
 		const QVector<MTPint> &data);
 
+	[[nodiscard]] const std::vector<TextWithEntities> *editHistory(FullMsgId id) const {
+		const auto i = _editHistory.find(id);
+		return (i != _editHistory.end()) ? &i->second : nullptr;
+	}
+
 	void removeReactionsFromParticipant(
 		not_null<PeerData*> peer,
 		MsgId msgId,
@@ -1284,6 +1289,7 @@ private:
 
 	base::flat_map<uint64, FullMsgId> _messageByRandomId;
 	base::flat_map<uint64, SentData> _sentMessagesData;
+	base::flat_map<FullMsgId, std::vector<TextWithEntities>> _editHistory;
 
 	std::unordered_map<
 		PhotoId,

@@ -3080,6 +3080,9 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 	if (existing->isLocalUpdateMedia() && data.type() == mtpc_message) {
 		updateExistingMessage(data.c_message());
 	}
+	if (!existing->originalText().text.isEmpty()) {
+		_editHistory[existing->fullId()].push_back(existing->originalText());
+	}
 	data.match([](const MTPDmessageEmpty &) {
 	}, [&](const MTPDmessageService &data) {
 		existing->applyEdition(data);
@@ -3369,6 +3372,22 @@ void Session::processMessagesDeleted(
 		}
 	}
 	if (!toDestroy.empty()) {
+		if (Core::App().settings().preserveDeleted()) {
+			for (const auto &item : toDestroy) {
+				if (!item->isDeletedLocally()) {
+					item->setDeletedLocally();
+					auto text = item->originalText();
+					text.text = QString::fromUtf8("🗑️ ") + text.text;
+					item->setText(std::move(text));
+					if (const auto history = item->history()) {
+						history->owner().requestItemResize(item);
+					}
+				}
+			}
+			toDestroy.clear();
+		}
+	}
+	if (!toDestroy.empty()) {
 		notifyItemsAboutToBeDestroyed(toDestroy);
 		for (const auto &item : toDestroy) {
 			item->destroy();
@@ -3389,6 +3408,22 @@ void Session::processNonChannelMessagesDeleted(const QVector<MTPint> &data) {
 			const auto history = item->history();
 			toDestroy.push_back(item);
 			historiesToCheck.emplace(history);
+		}
+	}
+	if (!toDestroy.empty()) {
+		if (Core::App().settings().preserveDeleted()) {
+			for (const auto &item : toDestroy) {
+				if (!item->isDeletedLocally()) {
+					item->setDeletedLocally();
+					auto text = item->originalText();
+					text.text = QString::fromUtf8("🗑️ ") + text.text;
+					item->setText(std::move(text));
+					if (const auto history = item->history()) {
+						history->owner().requestItemResize(item);
+					}
+				}
+			}
+			toDestroy.clear();
 		}
 	}
 	if (!toDestroy.empty()) {

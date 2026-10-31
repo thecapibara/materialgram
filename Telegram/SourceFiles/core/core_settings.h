@@ -849,6 +849,12 @@ public:
 	[[nodiscard]] bool ghostMode() const {
 		return readPref<bool>("ghost_mode", false);
 	}
+	void setPreserveDeleted(bool value) {
+		writePref<bool>("preserve_deleted", value);
+	}
+	[[nodiscard]] bool preserveDeleted() const {
+		return readPref<bool>("preserve_deleted", true);
+	}
 	void setDatacenterEnabled(bool value) {
 		_datacenterEnabled = value;
 	}

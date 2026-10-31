@@ -1386,6 +1386,23 @@ void BuildMaterialgramSection(SectionBuilder &builder) {
 		}, ghostMode->lifetime());
 	}
 
+	const auto preserveDeleted = builder.addButton({
+		.id = u"advanced/materialgram_preserve_deleted"_q,
+		.title = rpl::single(u"Keep deleted messages and track edit history"_q),
+		.st = &st::settingsButtonNoIcon,
+		.toggled = rpl::single(settings->preserveDeleted()),
+		.keywords = { u"delete"_q, u"edit"_q, u"history"_q, u"ghost"_q },
+	});
+	if (preserveDeleted) {
+		preserveDeleted->toggledValue(
+		) | rpl::filter([=](bool enabled) {
+			return (enabled != settings->preserveDeleted());
+		}) | rpl::on_next([=](bool enabled) {
+			settings->setPreserveDeleted(enabled);
+			Core::App().saveSettingsDelayed();
+		}, preserveDeleted->lifetime());
+	}
+
 	const auto registration = builder.addButton({
 		.id = u"advanced/materialgram_registration"_q,
 		.title = tr::lng_materialgram_info_registration(),

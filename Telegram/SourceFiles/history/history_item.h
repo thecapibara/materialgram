@@ -571,6 +571,12 @@ public:
 	[[nodiscard]] std::shared_ptr<const Iv::RichPage> fullRichPage() const;
 	[[nodiscard]] uint64 fullRichPageVersion() const;
 	[[nodiscard]] bool computeDropForwardedInfo() const;
+	[[nodiscard]] bool isDeletedLocally() const {
+		return _deletedLocally;
+	}
+	void setDeletedLocally() {
+		_deletedLocally = true;
+	}
 	void setText(TextWithEntities textWithEntities);
 	void applyLocalRichPage(std::shared_ptr<const Iv::RichPage> page);
 	void applyLocalRichPage(
@@ -838,6 +844,7 @@ private:
 
 	MessageGroupId _groupId = MessageGroupId();
 	EffectId _effectId = 0;
+	bool _deletedLocally = false;
 	HistoryView::Element *_mainView = nullptr;
 
 	friend class HistoryView::Element;

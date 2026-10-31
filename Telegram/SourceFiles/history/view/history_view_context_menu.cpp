@@ -2047,6 +2047,36 @@ void FillContextMenuItems(
 				list->controller());
 		}
 	}
+	if (item) {
+		const auto owner = &item->history()->owner();
+		if (const auto edits = owner->editHistory(item->fullId())) {
+			const auto count = edits->size();
+			result->addAction(u"View Edit History (%1)"_q.arg(count), [=] {
+				list->controller()->show(Box([=](not_null<Ui::GenericBox*> box) {
+					box->setWidth(st::boxWideWidth);
+					box->setTitle(rpl::single(u"Message Edit History"_q));
+					box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
+					auto version = 1;
+					for (const auto &historyText : *edits) {
+						box->addRow(
+							object_ptr<Ui::FlatLabel>(
+								box,
+								u"Version %1:"_q.arg(version++),
+								st::boxTitle),
+							st::boxRowPadding);
+						const auto label = box->addRow(
+							object_ptr<Ui::FlatLabel>(
+								box,
+								historyText.text,
+								st::aboutLabel),
+							st::boxRowPadding);
+						label->setSelectable(true);
+						Ui::AddSkip(box->verticalLayout());
+					}
+				}));
+			}, &st::menuIconEdit);
+		}
+	}
 }
 
 base::unique_qptr<Ui::PopupMenu> FillContextMenu(
