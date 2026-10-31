@@ -20,6 +20,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/random.h"
 #include "boxes/compose_ai_box.h"
 #include "boxes/gemini_result_box.h"
+#include "boxes/gemini_settings_box.h"
+#include "ui/boxes/choose_language_box.h"
+#include "spellcheck/spellcheck_types.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/send_credits_box.h"
@@ -447,6 +450,14 @@ HistoryWidget::HistoryWidget(
 			send(action.options);
 		} else if (action.type == SendMenu::ActionType::AiCompose) {
 			showAiComposeBox();
+		} else if (action.type == SendMenu::ActionType::GeminiAi) {
+			showGeminiAiBox();
+		} else if (action.type == SendMenu::ActionType::GeminiTranslate) {
+			triggerGeminiTranslate();
+		} else if (action.type == SendMenu::ActionType::GeminiChooseLanguage) {
+			chooseGeminiLanguage();
+		} else if (action.type == SendMenu::ActionType::GeminiSettings) {
+			controller()->show(Box(Ui::GeminiSettingsBox));
 		} else {
 			sendScheduled(action.options);
 		}
@@ -5576,6 +5587,84 @@ void HistoryWidget::showAiComposeBox() {
 		.send = std::move(send),
 		.setupMenu = std::move(setupMenu),
 	});
+}
+
+void HistoryWidget::showGeminiAiBox() {
+	const auto text = prepareTextForEditMsg();
+	if (text.text.isEmpty()) {
+		return;
+	}
+	if (!Api::Gemini::IsConfigured()) {
+		Ui::Toast::Show(this, u"Please configure your Gemini API Key first."_q);
+		controller()->show(Box(Ui::GeminiSettingsBox));
+		return;
+	}
+	controller()->show(Box(
+		Ui::GeminiResultBox,
+		Ui::GeminiResultBoxArgs{
+			.type = Ui::GeminiActionType::CustomQuery,
+			.title = u"Gemini AI: Polish / Rewrite Text"_q,
+			.inputText = text.text,
+			.applyToDraft = crl::guard(this, [=](QString result) {
+				const auto action = Ui::InputField::HistoryAction::NewEntry;
+				setFieldText(
+					{ result },
+					TextUpdateEvent::SaveDraft,
+					action);
+			}),
+		}));
+}
+
+void HistoryWidget::triggerGeminiTranslate() {
+	const auto text = prepareTextForEditMsg();
+	if (text.text.trimmed().isEmpty()) {
+		return;
+	}
+	if (!Api::Gemini::IsConfigured()) {
+		Ui::Toast::Show(this, u"Please configure your Gemini API Key first."_q);
+		controller()->show(Box(Ui::GeminiSettingsBox));
+		return;
+	}
+	const auto targetLang = Api::Gemini::TargetLanguage();
+	Ui::Toast::Show(this, u"Translating with Gemini..."_q);
+
+	Api::Gemini::RequestOptions opt;
+	opt.prompt = text.text;
+	opt.systemInstruction = u"Translate the following text into %1. Preserve the meaning, formatting, and tone. Output ONLY the raw translated text, without explanations or markdown formatting like quotes or backticks."_q.arg(targetLang);
+
+	const auto weak = base::make_weak(this);
+	Api::Gemini::GenerateContent(std::move(opt), [=](Api::Gemini::Response res) {
+		if (weak.get()) {
+			if (res.success) {
+				const auto action = Ui::InputField::HistoryAction::NewEntry;
+				setFieldText(
+					{ res.text.trimmed() },
+					TextUpdateEvent::SaveDraft,
+					action);
+				Ui::Toast::Show(weak.get(), u"Translated to %1."_q.arg(targetLang.toUpper()));
+			} else {
+				Ui::Toast::Show(weak.get(), u"Translation Error: %1"_q.arg(res.error));
+			}
+		}
+	});
+}
+
+void HistoryWidget::chooseGeminiLanguage() {
+	const auto twoLetter = Api::Gemini::TargetLanguage();
+	const auto currentLangId = LanguageId{ QLocale(twoLetter).language() };
+	controller()->show(Box(
+		Ui::ChooseLanguageBox,
+		tr::lng_languages(),
+		[=](std::vector<LanguageId> ids) {
+			if (!ids.empty()) {
+				const auto code = ids.front().twoLetterCode();
+				Api::Gemini::SetTargetLanguage(code);
+				Ui::Toast::Show(this, u"Translation language set to %1"_q.arg(code.toUpper()));
+			}
+		},
+		std::vector<LanguageId>{ currentLangId },
+		false,
+		nullptr));
 }
 
 void HistoryWidget::triggerAiApplyInPlace() {

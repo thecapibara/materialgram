@@ -9,16 +9,19 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_gemini.h"
 #include "lang/lang_keys.h"
+#include "ui/text/text_utilities.h"
 #include "ui/toast/toast.h"
 #include "ui/vertical_list.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/checkbox.h"
+#include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "styles/style_boxes.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_widgets.h"
 
 namespace Ui {
 
@@ -28,13 +31,20 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 
 	const auto content = box->verticalLayout();
 
-	// Description label with link to Google AI Studio
-	box->addRow(
+	// Description label with clickable link
+	auto desc = TextWithEntities{
+		u"Configure Google Gemini AI for smart replies, message summarization, translation, image analysis, and voice-to-text.\n\nYou can get a free API key at "_q
+	};
+	desc.append(Ui::Text::Link(u"Google AI Studio"_q, u"https://aistudio.google.com/apikey"_q));
+	desc.append(u"."_q);
+
+	const auto descLabel = box->addRow(
 		object_ptr<FlatLabel>(
 			box,
-			u"Configure Google Gemini AI for smart replies, message summarization, translation, and image analysis.<br><br>You can get a free API key at <a href=\"https://aistudio.google.com/apikey\">Google AI Studio</a>."_q,
+			rpl::single(desc),
 			st::aboutLabel),
 		st::boxRowPadding);
+	descLabel->setLinksTrusted();
 
 	AddSkip(content);
 
@@ -49,31 +59,25 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 
 	AddSkip(content);
 
-	// API Key Header & Input
-	box->addRow(
-		object_ptr<FlatLabel>(box, u"Gemini API Key:"_q, st::boxTitle),
-		st::boxRowPadding);
-
+	// API Key
+	AddSubsectionTitle(content, rpl::single(u"Gemini API Key"_q));
 	const auto apiKeyField = box->addRow(
 		object_ptr<InputField>(
 			box,
 			st::defaultInputField,
-			rpl::single(u"AIzaSy..."_q),
+			nullptr,
 			Api::Gemini::ApiKey()),
 		st::boxRowPadding);
 
 	AddSkip(content);
 
-	// Model Header & Input
-	box->addRow(
-		object_ptr<FlatLabel>(box, u"Model Name:"_q, st::boxTitle),
-		st::boxRowPadding);
-
+	// Model Name
+	AddSubsectionTitle(content, rpl::single(u"Model Name"_q));
 	const auto modelField = box->addRow(
 		object_ptr<InputField>(
 			box,
 			st::defaultInputField,
-			rpl::single(u"gemini-1.5-flash"_q),
+			nullptr,
 			Api::Gemini::Model()),
 		st::boxRowPadding);
 
@@ -131,40 +135,44 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 
 	AddSkip(content);
 
-	// System Prompt Header & Input
-	box->addRow(
-		object_ptr<FlatLabel>(
-			box,
-			u"System Prompt (Custom Instructions):"_q,
-			st::boxTitle),
-		st::boxRowPadding);
-
+	// System Prompt
+	AddSubsectionTitle(content, rpl::single(u"System Prompt (Custom Instructions)"_q));
 	const auto systemPromptField = box->addRow(
 		object_ptr<InputField>(
 			box,
 			st::defaultInputField,
 			InputField::Mode::MultiLine,
-			rpl::single(u"E.g.: You are a helpful assistant. Keep replies concise and polite."_q),
+			nullptr,
 			Api::Gemini::SystemPrompt()),
 		st::boxRowPadding);
 
 	AddSkip(content);
 
-	// Temperature / Creativity Header & Field
-	box->addRow(
+	// Temperature / Creativity Slider
+	const auto tempState = box->lifetime().make_state<float64>(Api::Gemini::Temperature());
+
+	AddSubsectionTitle(content, rpl::single(u"Temperature (Creativity)"_q));
+
+	const auto tempValueLabel = box->addRow(
 		object_ptr<FlatLabel>(
 			box,
-			u"Temperature (Creativity: 0.0 - 1.0, Default 0.5):"_q,
-			st::boxTitle),
+			rpl::single(QString::number(*tempState, 'f', 2)),
+			st::aboutLabel),
 		st::boxRowPadding);
 
-	const auto tempField = box->addRow(
-		object_ptr<InputField>(
-			box,
-			st::defaultInputField,
-			rpl::single(u"0.5"_q),
-			QString::number(Api::Gemini::Temperature(), 'f', 1)),
+	const auto tempSlider = box->addRow(
+		object_ptr<MediaSlider>(box, st::defaultContinuousSlider),
 		st::boxRowPadding);
+	tempSlider->resize(st::defaultContinuousSlider.seekSize);
+	tempSlider->setAlwaysDisplayMarker(true);
+	tempSlider->setValue(*tempState);
+
+	const auto updateTemp = [=](float64 val) {
+		*tempState = std::clamp(val, 0.0, 1.0);
+		tempValueLabel->setText(QString::number(*tempState, 'f', 2));
+	};
+	tempSlider->setChangeProgressCallback(updateTemp);
+	tempSlider->setChangeFinishedCallback(updateTemp);
 
 	AddSkip(content);
 
@@ -173,7 +181,7 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 		const auto key = apiKeyField->getLastText().trimmed();
 		const auto model = modelField->getLastText().trimmed();
 		const auto prompt = systemPromptField->getLastText();
-		const auto tempVal = tempField->getLastText().toDouble();
+		const auto tempVal = *tempState;
 		const auto enabled = enabledCheckbox->checked();
 
 		Api::Gemini::SetApiKey(key);

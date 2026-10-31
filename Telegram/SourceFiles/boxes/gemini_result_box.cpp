@@ -58,7 +58,7 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 			object_ptr<FlatLabel>(
 				box,
 				u"Original: %1"_q.arg(snippet),
-				st::boxTitle),
+				st::aboutLabel),
 			st::boxRowPadding);
 		AddSkip(content);
 	}

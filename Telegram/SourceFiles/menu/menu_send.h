@@ -50,6 +50,10 @@ enum class ActionType : uchar {
 	RemoveCover,
 	ChangePrice,
 	AiCompose,
+	GeminiAi,
+	GeminiTranslate,
+	GeminiChooseLanguage,
+	GeminiSettings,
 };
 struct Action {
 	using Type = ActionType;

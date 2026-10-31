@@ -444,6 +444,9 @@ private:
 	void createTabbedPanel();
 	void setTabbedPanel(std::unique_ptr<ChatHelpers::TabbedPanel> panel);
 	void showAiComposeBox();
+	void showGeminiAiBox();
+	void triggerGeminiTranslate();
+	void chooseGeminiLanguage();
 	void triggerAiApplyInPlace();
 	[[nodiscard]] bool canSendAiComposeDirect() const;
 

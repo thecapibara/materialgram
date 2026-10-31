@@ -572,6 +572,9 @@ private:
 	void updateAiButtonVisibility();
 	void updateAiButtonGeometry();
 	void showAiComposeBox();
+	void showGeminiAiBox();
+	void triggerGeminiTranslate();
+	void chooseGeminiLanguage();
 	void triggerAiApplyInPlace();
 	void initSendAsFileButton();
 	void sendTextAsFile(

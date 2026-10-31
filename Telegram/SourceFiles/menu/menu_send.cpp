@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "menu/menu_send.h"
 
+#include "api/api_gemini.h"
 #include "menu/menu_checked_action.h"
 
 #include "api/api_common.h"
@@ -767,9 +768,31 @@ FillMenuResult FillSendMenu(
 			&icons.menuWhenOnline);
 	}
 	if (sending && details.aiComposeAllowed) {
+		const auto lang = Api::Gemini::TargetLanguage().toUpper();
+
 		menu->addAction(
-			tr::lng_ai_compose_title(tr::now),
-			[=] { action({ .type = ActionType::AiCompose }, details); },
+			u"Translate (%1)"_q.arg(lang),
+			[=] { action({ .type = ActionType::GeminiTranslate }, details); },
+			&st::menuIconTranslate);
+
+		auto geminiMenu = std::make_unique<Ui::PopupMenu>(menu.get(), menu->st());
+		geminiMenu->addAction(
+			u"Polish / Rewrite Text"_q,
+			[=] { action({ .type = ActionType::GeminiAi }, details); },
+			&st::menuIconTranslate);
+		geminiMenu->addAction(
+			u"Choose Language (%1)..."_q.arg(lang),
+			[=] { action({ .type = ActionType::GeminiChooseLanguage }, details); },
+			&st::menuIconSettings);
+		geminiMenu->addSeparator();
+		geminiMenu->addAction(
+			u"Settings"_q,
+			[=] { action({ .type = ActionType::GeminiSettings }, details); },
+			&st::menuIconSettings);
+
+		menu->addAction(
+			u"Gemini AI"_q,
+			std::move(geminiMenu),
 			&st::menuIconTranslate);
 	}
 
