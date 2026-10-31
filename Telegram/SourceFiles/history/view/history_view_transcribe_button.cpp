@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/ripple_animation.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
+#include "api/api_gemini.h"
 #include "api/api_transcribes.h"
 #include "apiwrap.h"
 #include "styles/style_chat.h"
@@ -330,6 +331,9 @@ void TranscribeButton::paint(
 }
 
 bool TranscribeButton::hasLock() const {
+	if (Api::Gemini::Enabled()) {
+		return false;
+	}
 	const auto session = &_item->history()->session();
 	if (session->premium()) {
 		return false;
@@ -378,7 +382,7 @@ ClickHandlerPtr TranscribeButton::link() {
 		if (!item) {
 			return;
 		}
-		if (session->premium()) {
+		if (session->premium() || Api::Gemini::Enabled()) {
 			auto &transcribes = session->api().transcribes();
 			return summarize
 				? transcribes.toggleSummary(item)

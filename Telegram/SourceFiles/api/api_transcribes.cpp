@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_transcribes.h"
 
+#include "api/api_gemini.h"
 #include "apiwrap.h"
 #include "api/api_text_entities.h"
 #include "data/data_channel.h"
@@ -21,6 +22,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "spellcheck/spellcheck_types.h"
+
+#include <QtCore/QFile>
 
 namespace Api {
 
@@ -185,6 +188,58 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 		}
 	};
 	const auto id = item->fullId();
+
+	const auto loadFromGemini = [=] {
+		const auto media = item->media();
+		const auto document = media ? media->document() : nullptr;
+		if (!document) {
+			return;
+		}
+		const auto mediaView = document->activeMediaView();
+		auto bytes = mediaView ? mediaView->bytes() : QByteArray();
+		if (bytes.isEmpty()) {
+			const auto path = document->filepath(true);
+			if (!path.isEmpty()) {
+				QFile f(path);
+				if (f.open(QIODevice::ReadOnly)) {
+					bytes = f.readAll();
+				}
+			}
+		}
+		if (bytes.isEmpty()) {
+			return;
+		}
+		auto &entry = _map.emplace(id).first->second;
+		entry.pending = true;
+		entry.shown = true;
+		entry.failed = false;
+
+		Api::Gemini::RequestOptions opt;
+		opt.prompt = u"You are a speech-to-text transcriber. Accurately transcribe the spoken content from the provided audio without translating it. Keep the original language of the speaker. Do not explain or comment on the content. Return only the plain transcribed text, without any headers, summaries, or formatting."_q;
+		opt.imageBytes = bytes;
+		opt.imageMimeType = u"audio/ogg"_q;
+		Api::Gemini::GenerateContent(std::move(opt), [=](Api::Gemini::Response res) {
+			auto &entry = _map[id];
+			entry.pending = false;
+			entry.requestId = 0;
+			if (res.success) {
+				entry.result = res.text;
+				entry.failed = false;
+			} else {
+				entry.failed = true;
+			}
+			if (const auto item = _session->data().message(id)) {
+				toggleRound(item, entry);
+				_session->data().requestItemResize(item);
+			}
+		});
+	};
+
+	if (!_session->premium() && Api::Gemini::Enabled()) {
+		loadFromGemini();
+		return;
+	}
+
 	const auto requestId = _api.request(MTPmessages_TranscribeAudio(
 		item->history()->peer->input(),
 		MTP_int(item->id)
@@ -217,6 +272,10 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 			_session->data().requestItemResize(item);
 		}
 	}).fail([=](const MTP::Error &error) {
+		if (Api::Gemini::Enabled()) {
+			loadFromGemini();
+			return;
+		}
 		auto &entry = _map[id];
 		entry.requestId = 0;
 		entry.pending = false;
