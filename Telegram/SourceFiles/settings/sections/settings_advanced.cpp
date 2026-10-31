@@ -1369,6 +1369,23 @@ void BuildMaterialgramSection(SectionBuilder &builder) {
 		}, bypassNoForwards->lifetime());
 	}
 
+	const auto ghostMode = builder.addButton({
+		.id = u"advanced/materialgram_ghost_mode"_q,
+		.title = rpl::single(u"Ghost Mode (Stealth reading and hide typing)"_q),
+		.st = &st::settingsButtonNoIcon,
+		.toggled = rpl::single(settings->ghostMode()),
+		.keywords = { u"ghost"_q, u"stealth"_q, u"read"_q, u"typing"_q },
+	});
+	if (ghostMode) {
+		ghostMode->toggledValue(
+		) | rpl::filter([=](bool enabled) {
+			return (enabled != settings->ghostMode());
+		}) | rpl::on_next([=](bool enabled) {
+			settings->setGhostMode(enabled);
+			Core::App().saveSettingsDelayed();
+		}, ghostMode->lifetime());
+	}
+
 	const auto registration = builder.addButton({
 		.id = u"advanced/materialgram_registration"_q,
 		.title = tr::lng_materialgram_info_registration(),

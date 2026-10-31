@@ -70,6 +70,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_history_messages.h"
 #include "core/core_cloud_password.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "base/unixtime.h"
 #include "base/random.h"
 #include "base/call_delayed.h"
@@ -1436,6 +1437,9 @@ void ApiWrap::migrateFail(not_null<PeerData*> peer, const QString &error) {
 
 void ApiWrap::markContentsRead(
 		const base::flat_set<not_null<HistoryItem*>> &items) {
+	if (Core::App().settings().ghostMode()) {
+		return;
+	}
 	auto markedIds = QVector<MTPint>();
 	auto channelMarkedIds = base::flat_map<
 		not_null<ChannelData*>,
@@ -1467,6 +1471,9 @@ void ApiWrap::markContentsRead(
 }
 
 void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
+	if (Core::App().settings().ghostMode()) {
+		return;
+	}
 	if (!item->markContentsRead(true) || !item->isRegular()) {
 		return;
 	}

@@ -843,6 +843,12 @@ public:
 	[[nodiscard]] bool bypassNoForwards() const {
 		return readPref<bool>("bypass_noforwards", true);
 	}
+	void setGhostMode(bool value) {
+		writePref<bool>("ghost_mode", value);
+	}
+	[[nodiscard]] bool ghostMode() const {
+		return readPref<bool>("ghost_mode", false);
+	}
 	void setDatacenterEnabled(bool value) {
 		_datacenterEnabled = value;
 	}
