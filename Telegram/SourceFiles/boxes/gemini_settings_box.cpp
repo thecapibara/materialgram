@@ -29,13 +29,12 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 	const auto content = box->verticalLayout();
 
 	// Description label with link to Google AI Studio
-	const auto description = box->addRow(
+	box->addRow(
 		object_ptr<FlatLabel>(
 			box,
 			u"Configure Google Gemini AI for smart replies, message summarization, translation, and image analysis.<br><br>You can get a free API key at <a href=\"https://aistudio.google.com/apikey\">Google AI Studio</a>."_q,
 			st::aboutLabel),
 		st::boxRowPadding);
-	description->setOpenExternalLinks(true);
 
 	AddSkip(content);
 
@@ -185,7 +184,7 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 		Api::Gemini::SetTemperature(tempVal);
 		Api::Gemini::SetEnabled(enabled);
 
-		Toast::Show(u"Gemini AI settings saved."_q);
+		Toast::Show(box, u"Gemini AI settings saved."_q);
 		box->closeBox();
 	});
 

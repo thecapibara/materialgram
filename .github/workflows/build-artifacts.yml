@@ -44,6 +44,7 @@ jobs:
 
           docker run --rm \
             -u $(id -u) \
+            -e KEEP_GOING=1 \
             -v $PWD:/usr/src/tdesktop \
             $IMAGE_TAG \
             /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
