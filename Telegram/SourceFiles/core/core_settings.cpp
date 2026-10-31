@@ -1373,13 +1373,14 @@ void Settings::writePrefGeneric(
 	_saveDelayed.fire({});
 }
 
-std::optional<QByteArray> Settings::readPrefGeneric(std::string_view key) {
+std::optional<QByteArray> Settings::readPrefGeneric(
+		std::string_view key) const {
 	const auto i = _prefs.find(QByteArray(key.data(), key.size()));
 	return (i != end(_prefs)) ? i->second : std::optional<QByteArray>();
 }
 
 template <>
-std::optional<bool> Settings::readPrefImpl<bool>(std::string_view key) {
+std::optional<bool> Settings::readPrefImpl<bool>(std::string_view key) const {
 	if (const auto data = readPrefGeneric(key)) {
 		return !data->isEmpty();
 	}
@@ -1392,8 +1393,44 @@ void Settings::writePrefImpl<bool>(std::string_view key, bool value) {
 }
 
 template <>
+std::optional<QString> Settings::readPrefImpl<QString>(
+		std::string_view key) const {
+	if (const auto data = readPrefGeneric(key)) {
+		return QString::fromUtf8(*data);
+	}
+	return {};
+}
+
+template <>
+void Settings::writePrefImpl<QString>(
+		std::string_view key,
+		QString value) {
+	writePrefGeneric(key, value.toUtf8());
+}
+
+template <>
+std::optional<int> Settings::readPrefImpl<int>(
+		std::string_view key) const {
+	if (const auto data = readPrefGeneric(key)) {
+		bool ok = false;
+		const auto val = data->toInt(&ok);
+		if (ok) {
+			return val;
+		}
+	}
+	return {};
+}
+
+template <>
+void Settings::writePrefImpl<int>(
+		std::string_view key,
+		int value) {
+	writePrefGeneric(key, QByteArray::number(value));
+}
+
+template <>
 std::optional<QByteArray> Settings::readPrefImpl<QByteArray>(
-		std::string_view key) {
+		std::string_view key) const {
 	return readPrefGeneric(key);
 }
 
