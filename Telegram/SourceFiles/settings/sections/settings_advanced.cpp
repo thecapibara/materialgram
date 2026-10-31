@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "settings/settings_common_session.h"
 
+#include "api/api_gemini.h"
 #include "api/api_global_privacy.h"
 #include "apiwrap.h"
 #include "base/call_delayed.h"
@@ -19,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/auto_download_box.h"
 #include "boxes/connection_box.h"
 #include "boxes/download_path_box.h"
+#include "boxes/gemini_settings_box.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "core/file_utilities.h"
@@ -1325,6 +1327,7 @@ void BuildScreenReaderSection(SectionBuilder &builder) {
 
 void BuildMaterialgramSection(SectionBuilder &builder) {
 	const auto settings = &Core::App().settings();
+	const auto controller = builder.controller();
 
 	builder.addDivider();
 	builder.addSkip();
@@ -1333,6 +1336,21 @@ void BuildMaterialgramSection(SectionBuilder &builder) {
 		.title = rpl::single(u"materialgram"_q),
 		.keywords = { u"materialgram"_q },
 	});
+
+	if (controller) {
+		const auto gemini = builder.addButton({
+			.id = u"advanced/materialgram_gemini"_q,
+			.title = rpl::single(u"Gemini AI Settings"_q),
+			.st = &st::settingsButtonNoIcon,
+			.label = rpl::single(Api::Gemini::Enabled()
+				? u"Enabled"_q
+				: (Api::Gemini::IsConfigured() ? u"Disabled"_q : u"Set up"_q)),
+			.onClick = [=] {
+				controller->show(Box(Ui::GeminiSettingsBox));
+			},
+			.keywords = { u"gemini"_q, u"ai"_q, u"google"_q },
+		});
+	}
 
 	const auto registration = builder.addButton({
 		.id = u"advanced/materialgram_registration"_q,

@@ -340,6 +340,8 @@ PRIVATE
     boxes/edit_privacy_box.h
     boxes/edit_todo_list_box.cpp
     boxes/edit_todo_list_box.h
+    boxes/gemini_settings_box.cpp
+    boxes/gemini_settings_box.h
     boxes/gift_credits_box.cpp
     boxes/gift_credits_box.h
     boxes/gift_premium_box.cpp
