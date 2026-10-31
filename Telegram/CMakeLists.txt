@@ -150,6 +150,8 @@ PRIVATE
     api/api_confirm_phone.h
     api/api_compose_with_ai.cpp
     api/api_compose_with_ai.h
+    api/api_gemini.cpp
+    api/api_gemini.h
     api/api_credits.cpp
     api/api_credits.h
     api/api_credits_history_entry.cpp
