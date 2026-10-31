@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/compose_ai_box.h"
 #include "boxes/gemini_result_box.h"
 #include "api/api_gemini.h"
+#include "data/data_ai_compose_tones.h"
 #include "boxes/edit_caption_box.h"
 #include "boxes/premium_preview_box.h"
 #include "boxes/send_files_box.h"

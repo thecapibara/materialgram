@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_gemini.h"
 #include "boxes/gemini_result_box.h"
 #include "data/data_photo_media.h"
+#include "ui/vertical_list.h"
 
 #include <QtCore/QBuffer>
 
@@ -2068,7 +2069,7 @@ void FillContextMenuItems(
 							object_ptr<Ui::FlatLabel>(
 								box,
 								historyText.text,
-								st::aboutLabel),
+								st::boxLabel),
 							st::boxRowPadding);
 						label->setSelectable(true);
 						Ui::AddSkip(box->verticalLayout());
