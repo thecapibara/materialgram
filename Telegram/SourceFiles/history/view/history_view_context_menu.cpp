@@ -114,6 +114,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/statistics/info_statistics_widget.h"
 #include "lang/lang_keys.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -3162,6 +3163,9 @@ void AddSelectRestrictionAction(
 		not_null<Ui::PopupMenu*> menu,
 		not_null<HistoryItem*> item,
 		bool addIcon) {
+	if (Core::App().settings().bypassNoForwards()) {
+		return;
+	}
 	const auto peer = item->history()->peer;
 	if ((peer->allowsForwarding() && !item->forbidsForward())
 		|| item->isSponsored()) {

@@ -2195,6 +2195,9 @@ bool ListWidget::showCopyRestrictionForSelected() {
 }
 
 bool ListWidget::hasSelectRestriction() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return false;
+	}
 	return session().frozen()
 		|| (_delegate->listSelectRestrictionType()
 			!= CopyRestrictionType::None);
@@ -6767,6 +6770,9 @@ void ConfirmSendNowSelectedItems(not_null<ListWidget*> widget) {
 CopyRestrictionType CopyRestrictionTypeFor(
 		not_null<PeerData*> peer,
 		HistoryItem *item) {
+	if (Core::App().settings().bypassNoForwards()) {
+		return CopyRestrictionType::None;
+	}
 	return (peer->allowsForwarding() && (!item || !item->forbidsForward()))
 		? CopyRestrictionType::None
 		: peer->isUser()
@@ -6779,6 +6785,9 @@ CopyRestrictionType CopyRestrictionTypeFor(
 CopyRestrictionType CopyMediaRestrictionTypeFor(
 		not_null<PeerData*> peer,
 		not_null<HistoryItem*> item) {
+	if (Core::App().settings().bypassNoForwards()) {
+		return CopyRestrictionType::None;
+	}
 	if (const auto all = CopyRestrictionTypeFor(peer, item)
 		; all != CopyRestrictionType::None) {
 		return all;
@@ -6794,6 +6803,9 @@ CopyRestrictionType CopyMediaRestrictionTypeFor(
 
 CopyRestrictionType SelectRestrictionTypeFor(
 		not_null<PeerData*> peer) {
+	if (Core::App().settings().bypassNoForwards()) {
+		return CopyRestrictionType::None;
+	}
 	if (const auto chat = peer->asChat()) {
 		return chat->canDeleteMessages()
 			? CopyRestrictionType::None

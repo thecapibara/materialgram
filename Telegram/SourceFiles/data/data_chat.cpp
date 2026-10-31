@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_chat.h"
 
 #include "core/application.h"
+#include "core/core_settings.h"
+
 #include "data/data_user.h"
 #include "data/data_channel.h"
 #include "data/data_session.h"
@@ -65,6 +67,9 @@ ChatAdminRightsInfo ChatData::defaultAdminRights(not_null<UserData*> user) {
 }
 
 bool ChatData::allowsForwarding() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return true;
+	}
 	return !(flags() & Flag::NoForwards);
 }
 

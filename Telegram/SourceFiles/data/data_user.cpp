@@ -7,6 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_user.h"
 
+#include "core/application.h"
+#include "core/core_settings.h"
+
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
 #include "api/api_sensitive_content.h"
@@ -687,6 +690,9 @@ bool UserData::readDatesPrivate() const {
 }
 
 bool UserData::allowsForwarding() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return true;
+	}
 	return !(flags() & Flag::NoForwardsMyEnabled)
 		&& !(flags() & Flag::NoForwardsPeerEnabled);
 }

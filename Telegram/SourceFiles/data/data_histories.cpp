@@ -173,23 +173,23 @@ void Histories::clearAll() {
 	_map.clear();
 }
 
-void Histories::readInbox(not_null<History*> history) {
+void Histories::readInbox(not_null<History*> history, bool force) {
 	DEBUG_LOG(("Reading: readInbox called."));
 	if (history->lastServerMessageKnown()) {
 		const auto last = history->lastServerMessage();
 		DEBUG_LOG(("Reading: last known, reading till %1."
 			).arg(last ? last->id.bare : 0));
-		readInboxTill(history, last ? last->id : 0);
+		readInboxTill(history, last ? last->id : 0, force);
 		return;
 	} else if (history->loadedAtBottom()) {
 		if (const auto lastId = history->maxMsgId()) {
 			DEBUG_LOG(("Reading: loaded at bottom, maxMsgId %1."
 				).arg(lastId.bare));
-			readInboxTill(history, lastId);
+			readInboxTill(history, lastId, force);
 			return;
 		} else if (history->loadedAtTop()) {
 			DEBUG_LOG(("Reading: loaded at bottom, loaded at top."));
-			readInboxTill(history, 0);
+			readInboxTill(history, 0, force);
 			return;
 		}
 		DEBUG_LOG(("Reading: loaded at bottom, but requesting entry."));
@@ -200,7 +200,7 @@ void Histories::readInbox(not_null<History*> history) {
 		const auto last = history->lastServerMessage();
 		DEBUG_LOG(("Reading: got entry, reading till %1."
 			).arg(last ? last->id.bare : 0));
-		readInboxTill(history, last ? last->id : 0);
+		readInboxTill(history, last ? last->id : 0, force);
 	});
 }
 
@@ -346,6 +346,9 @@ void Histories::readInboxTill(
 }
 
 void Histories::readInboxOnNewMessage(not_null<HistoryItem*> item) {
+	if (Core::App().settings().ghostMode()) {
+		return;
+	}
 	if (!item->isRegular()) {
 		readClientSideMessage(item);
 	} else {

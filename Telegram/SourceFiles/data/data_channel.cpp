@@ -7,6 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_channel.h"
 
+#include "core/application.h"
+#include "core/core_settings.h"
+
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
 #include "api/api_statistics.h"
@@ -771,6 +774,9 @@ bool ChannelData::canAddAdmins() const {
 }
 
 bool ChannelData::allowsForwarding() const {
+	if (Core::App().settings().bypassNoForwards()) {
+		return true;
+	}
 	return !(flags() & Flag::NoForwards);
 }
 

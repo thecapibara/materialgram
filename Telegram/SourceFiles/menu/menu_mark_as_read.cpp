@@ -92,7 +92,7 @@ void MarkAsReadThread(
 		not_null<Data::Thread*> thread,
 		MarkAsReadMuted muted) {
 	const auto readHistory = [&](not_null<History*> history) {
-		history->owner().histories().readInbox(history);
+		history->owner().histories().readInbox(history, true);
 	};
 	if (!IsUnreadThread(thread)
 		|| ((muted == MarkAsReadMuted::Skip) && SkipMutedThread(thread))) {
