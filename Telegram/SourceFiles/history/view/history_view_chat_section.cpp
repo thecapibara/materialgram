@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_chat_section.h"
 
+#include "api/api_gemini.h"
+
 #include "history/admin_log/history_admin_log_section.h"
 #include "history/view/controls/history_view_top_controls.h"
 #include "history/view/controls/history_view_bottom_controls.h"
@@ -3293,7 +3295,8 @@ SendMenu::Details ChatWidget::sendMenuDetails() const {
 		: Type::Scheduled;
 	const auto aiComposeAllowed =
 		!_composeControls->getTextWithAppliedMarkdown().text.isEmpty()
-		&& !session().data().aiComposeTones().list().empty();
+		&& (!session().data().aiComposeTones().list().empty()
+			|| Api::Gemini::Enabled());
 	return SendMenu::Details{
 		.type = type,
 		.barePeerId = (_sublist

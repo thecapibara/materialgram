@@ -21,6 +21,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/weak_ptr.h"
 #include "boxes/star_gift_box.h"
 #include "boxes/compose_ai_box.h"
+#include "boxes/gemini_result_box.h"
+#include "api/api_gemini.h"
 #include "boxes/edit_caption_box.h"
 #include "boxes/premium_preview_box.h"
 #include "boxes/send_files_box.h"
@@ -5391,6 +5393,23 @@ bool ComposeControls::updateLikeShown() {
 void ComposeControls::showAiComposeBox() {
 	const auto text = prepareTextForEditMsg();
 	if (text.text.isEmpty()) {
+		return;
+	}
+	if (Api::Gemini::Enabled() && _session->data().aiComposeTones().list().empty()) {
+		_show->showBox(Box(
+			Ui::GeminiResultBox,
+			Ui::GeminiResultBoxArgs{
+				.type = Ui::GeminiActionType::CustomQuery,
+				.title = u"Gemini AI: Polish / Rewrite Text"_q,
+				.inputText = text.text,
+				.applyToDraft = crl::guard(_wrap.get(), [=](QString result) {
+					const auto action = Ui::InputField::HistoryAction::NewEntry;
+					setFieldText({
+						result,
+						TextTags(),
+					}, TextUpdateEvent::SaveDraft, action);
+				}),
+			}));
 		return;
 	}
 	auto send = Fn<void(TextWithEntities, Api::SendOptions, Fn<void()>)>();

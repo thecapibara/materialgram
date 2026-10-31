@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_widget.h"
 
+#include "api/api_gemini.h"
 #include "api/api_compose_with_ai.h"
 #include "api/api_editing.h"
 #include "api/api_bot.h"
@@ -18,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_unread_things.h"
 #include "base/random.h"
 #include "boxes/compose_ai_box.h"
+#include "boxes/gemini_result_box.h"
 #include "ui/boxes/confirm_box.h"
 #include "boxes/delete_messages_box.h"
 #include "boxes/send_credits_box.h"
@@ -5521,6 +5523,23 @@ void HistoryWidget::showAiComposeBox() {
 	if (text.text.isEmpty()) {
 		return;
 	}
+	if (Api::Gemini::Enabled() && session().data().aiComposeTones().list().empty()) {
+		controller()->show(Box(
+			Ui::GeminiResultBox,
+			Ui::GeminiResultBoxArgs{
+				.type = Ui::GeminiActionType::CustomQuery,
+				.title = u"Gemini AI: Polish / Rewrite Text"_q,
+				.inputText = text.text,
+				.applyToDraft = crl::guard(this, [=](QString result) {
+					const auto action = Ui::InputField::HistoryAction::NewEntry;
+					setFieldText({
+						result,
+						TextTags(),
+					}, TextUpdateEvent::SaveDraft, action);
+				}),
+			}));
+		return;
+	}
 	auto send = Fn<void(TextWithEntities &&, Api::SendOptions, Fn<void()>)>(
 		nullptr);
 	auto setupMenu = Fn<void(
@@ -6099,7 +6118,8 @@ SendMenu::Details HistoryWidget::sendMenuDetails() const {
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _peer && _peer->isUser();
 	const auto aiComposeAllowed = _field->hasText()
-		&& !session().data().aiComposeTones().list().empty();
+		&& (!session().data().aiComposeTones().list().empty()
+			|| Api::Gemini::Enabled());
 	return {
 		.type = type,
 		.barePeerId = _peer ? _peer->id.value : 0,

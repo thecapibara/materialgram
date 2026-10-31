@@ -7,6 +7,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/history_view_context_menu.h"
 
+#include "api/api_gemini.h"
+#include "boxes/gemini_result_box.h"
+#include "data/data_photo_media.h"
+
+#include <QtCore/QBuffer>
+
 #include "api/api_attached_stickers.h"
 #include "api/api_editing.h"
 #include "api/api_global_privacy.h"
@@ -382,6 +388,41 @@ void AddPhotoActions(
 				CopyImage(photo);
 			}
 		}, &st::menuIconCopy);
+
+		if (Api::Gemini::Enabled()) {
+			const auto handlePhoto = [=](Ui::GeminiActionType type) {
+				const auto media = photo->activeMediaView();
+				if (!media) {
+					return;
+				}
+				auto bytes = media->imageBytes(Data::PhotoSize::Large);
+				if (bytes.isEmpty()) {
+					if (const auto img = media->image(Data::PhotoSize::Large)) {
+						QBuffer buffer(&bytes);
+						buffer.open(QIODevice::WriteOnly);
+						img->original().save(&buffer, "JPEG");
+					}
+				}
+				if (bytes.isEmpty()) {
+					return;
+				}
+				list->controller()->show(Box(
+					Ui::GeminiResultBox,
+					Ui::GeminiResultBoxArgs{
+						.type = type,
+						.imageBytes = bytes,
+						.imageMimeType = u"image/jpeg"_q,
+					}));
+			};
+
+			menu->addAction(u"Extract Text (OCR) with Gemini"_q, [=] {
+				handlePhoto(Ui::GeminiActionType::Ocr);
+			}, &st::menuIconTranslate);
+
+			menu->addAction(u"Describe Image with Gemini"_q, [=] {
+				handlePhoto(Ui::GeminiActionType::DescribeImage);
+			}, &st::menuIconTranslate);
+		}
 	}
 	if (photo->hasAttachedStickers()) {
 		const auto controller = list->controller();
@@ -1835,6 +1876,20 @@ void FillContextMenuItems(
 			}
 		}, &st::menuIconTranslate);
 	}
+	if (Api::Gemini::Enabled()
+		&& request.overSelection
+		&& view
+		&& !list->getSelectedText().empty()
+		&& !list->hasCopyRestrictionForSelected()) {
+		result->addAction(u"Summarize Selection with Gemini"_q, [=] {
+			list->controller()->show(Box(
+				Ui::GeminiResultBox,
+				Ui::GeminiResultBoxArgs{
+					.type = Ui::GeminiActionType::Summarize,
+					.inputText = list->getSelectedText().rich.text,
+				}));
+		}, &st::menuIconTranslate);
+	}
 
 	AddTopMessageActions(result, request, list);
 	if (lnkPhoto && request.selectedItems.empty()) {
@@ -1918,6 +1973,51 @@ void FillContextMenuItems(
 							list->hasCopyRestriction(view->data())));
 					}
 				}, &st::menuIconTranslate);
+			}
+
+			if (Api::Gemini::Enabled()
+				&& !translate.text.isEmpty()
+				&& !list->hasCopyRestriction(view->data())) {
+				result->addAction(u"Summarize with Gemini"_q, [=] {
+					list->controller()->show(Box(
+						Ui::GeminiResultBox,
+						Ui::GeminiResultBoxArgs{
+							.type = Ui::GeminiActionType::Summarize,
+							.inputText = translate.text,
+						}));
+				}, &st::menuIconTranslate);
+
+				const auto topic = item->topic();
+				const auto peer = item->history()->peer.get();
+				const auto canSend = topic
+					? Data::CanSendAnything(topic)
+					: Data::CanSendAnything(peer);
+				if (canSend) {
+					result->addAction(u"Reply with Gemini"_q, [=] {
+						const auto weak = base::make_weak(list.get());
+						list->replyToMessageRequestNotify(
+							{ .messageId = itemId },
+							base::IsCtrlPressed());
+						Ui::Toast::Show(list, u"Generating reply with Gemini..."_q);
+
+						Api::Gemini::RequestOptions opt;
+						opt.prompt = translate.text;
+						opt.systemInstruction = Api::Gemini::SystemPrompt().isEmpty()
+							? u"You are a helpful assistant. Reply to the message directly, concisely, and naturally in the same language."_q
+							: Api::Gemini::SystemPrompt();
+
+						Api::Gemini::GenerateContent(std::move(opt), [=](Api::Gemini::Response res) {
+							if (const auto strong = weak.get()) {
+								if (res.success) {
+									strong->insertTextAtCursor(res.text);
+									Ui::Toast::Show(strong, u"Reply generated with Gemini AI."_q);
+								} else {
+									Ui::Toast::Show(strong, u"Gemini Error: %1"_q.arg(res.error));
+								}
+							}
+						});
+					}, &st::menuIconReply);
+				}
 			}
 		}
 	}
