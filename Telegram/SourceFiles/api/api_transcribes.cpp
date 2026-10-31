@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_text_entities.h"
 #include "data/data_channel.h"
 #include "data/data_document.h"
+#include "data/data_document_media.h"
 #include "data/data_peer.h"
 #include "data/data_session.h"
 #include "history/history.h"
