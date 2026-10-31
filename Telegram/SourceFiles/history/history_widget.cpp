@@ -5532,10 +5532,10 @@ void HistoryWidget::showAiComposeBox() {
 				.inputText = text.text,
 				.applyToDraft = crl::guard(this, [=](QString result) {
 					const auto action = Ui::InputField::HistoryAction::NewEntry;
-					setFieldText({
-						result,
-						TextTags(),
-					}, TextUpdateEvent::SaveDraft, action);
+					setFieldText(
+						{ result },
+						TextUpdateEvent::SaveDraft,
+						action);
 				}),
 			}));
 		return;

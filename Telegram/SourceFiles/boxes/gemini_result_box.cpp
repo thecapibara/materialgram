@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/wrap/slide_wrap.h"
 #include "styles/style_boxes.h"
+#include "styles/style_layers.h"
 
 namespace Ui {
 namespace {
@@ -93,7 +94,7 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 	// Bottom action buttons
 	const auto applyDraft = args.applyToDraft;
 	if (applyDraft) {
-		box->addButton(u"Insert into draft"_q, [=] {
+		box->addButton(rpl::single(u"Insert into draft"_q), [=] {
 			if (!state->currentResult.isEmpty()) {
 				applyDraft(state->currentResult);
 				box->closeBox();
@@ -105,7 +106,8 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		if (state->currentResult.isEmpty()) {
 			return;
 		}
-		TextUtilities::SetClipboardText(state->currentResult);
+		TextUtilities::SetClipboardText(
+			TextForMimeData::Simple(state->currentResult));
 		Toast::Show(box, tr::lng_text_copied(tr::now));
 	});
 

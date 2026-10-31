@@ -5404,10 +5404,10 @@ void ComposeControls::showAiComposeBox() {
 				.inputText = text.text,
 				.applyToDraft = crl::guard(_wrap.get(), [=](QString result) {
 					const auto action = Ui::InputField::HistoryAction::NewEntry;
-					setFieldText({
-						result,
-						TextTags(),
-					}, TextUpdateEvent::SaveDraft, action);
+					setFieldText(
+						{ result },
+						TextUpdateEvent::SaveDraft,
+						action);
 				}),
 			}));
 		return;

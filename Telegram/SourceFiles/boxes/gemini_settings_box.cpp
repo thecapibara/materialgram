@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/widgets/popup_menu.h"
 #include "styles/style_boxes.h"
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 
 namespace Ui {
