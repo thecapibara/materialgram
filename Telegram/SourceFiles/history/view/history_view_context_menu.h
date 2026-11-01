@@ -15,6 +15,8 @@ class Session;
 struct ReactionId;
 } // namespace Data
 
+class PhotoData;
+
 namespace Main {
 class Session;
 class SessionShow;
@@ -54,6 +56,19 @@ struct ContextMenuRequest {
 	bool overSelection = false;
 	PointState pointState = PointState();
 };
+
+struct GeminiMenuArgs {
+	not_null<Ui::PopupMenu*> menu;
+	not_null<Window::SessionController*> controller;
+	HistoryItem *item = nullptr;
+	PhotoData *photo = nullptr;
+	QString textForAi;
+	bool canSendReply = false;
+	Fn<void(FullMsgId)> replyToMessage;
+	Fn<void(QString)> insertText;
+};
+
+bool AddGeminiActions(GeminiMenuArgs &&args);
 
 base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 	not_null<ListWidget*> list,

@@ -216,7 +216,8 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 		entry.failed = false;
 
 		Api::Gemini::RequestOptions opt;
-		opt.prompt = u"You are a speech-to-text transcriber. Accurately transcribe the spoken content from the provided audio without translating it. Keep the original language of the speaker. Do not explain or comment on the content. Return only the plain transcribed text, without any headers, summaries, or formatting."_q;
+		opt.systemInstruction = u"You are an accurate speech-to-text transcriber. Transcribe the spoken audio verbatim in its original language without translating or adding commentary."_q;
+		opt.prompt = u"Transcribe this audio."_q;
 		opt.imageBytes = bytes;
 		opt.imageMimeType = u"audio/ogg"_q;
 		Api::Gemini::GenerateContent(std::move(opt), [=](Api::Gemini::Response res) {

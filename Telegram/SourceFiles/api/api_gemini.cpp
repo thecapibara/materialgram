@@ -123,9 +123,9 @@ void GenerateContent(
 	QJsonObject root;
 
 	// System instruction
-	const auto systemPrompt = options.systemInstruction.isEmpty()
-		? SystemPrompt()
-		: options.systemInstruction;
+	const auto systemPrompt = !options.systemInstruction.isEmpty()
+		? options.systemInstruction
+		: (options.useCustomSystemPrompt ? SystemPrompt() : QString());
 	if (!systemPrompt.isEmpty()) {
 		QJsonObject sysPart;
 		sysPart[u"text"_q] = systemPrompt;

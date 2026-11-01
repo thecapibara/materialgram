@@ -3344,6 +3344,32 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		}
 	};
 
+	const auto addGeminiAction = [&](HistoryItem *item, PhotoData *photo, bool overSelection) {
+		if (!item && !photo) {
+			return;
+		}
+		const auto selectedText = getSelectedText().rich.text;
+		const auto textForAi = (overSelection && !selectedText.isEmpty())
+			? selectedText
+			: (item ? item->originalText().text : QString());
+		const auto canSendReply = item ? CanSendReply(item) : false;
+
+		HistoryView::AddGeminiActions(HistoryView::GeminiMenuArgs{
+			.menu = _menu.get(),
+			.controller = _controller,
+			.item = item,
+			.photo = photo,
+			.textForAi = textForAi,
+			.canSendReply = canSendReply,
+			.replyToMessage = [=](FullMsgId id) {
+				_widget->replyToMessage({ .messageId = id });
+			},
+			.insertText = [=](QString text) {
+				_widget->insertTextAtCursor(text);
+			},
+		});
+	};
+
 	const auto addUnpinSelectedAction = [&] {
 		auto ids = Window::MessagesToUnpin(session, getSelectedItems());
 		if (ids.empty()) {
@@ -3384,6 +3410,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	if (lnkPhoto || lnkDocument) {
 		const auto item = _dragStateItem;
 		const auto itemId = item ? item->fullId() : FullMsgId();
+		addGeminiAction(item, lnkPhoto, isUponSelected > 0);
 		addReplyAction(item);
 
 		if (isUponSelected > 0) {
@@ -3549,6 +3576,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				sponsored->fullId());
 		}
 		if (isUponSelected > 0) {
+			addGeminiAction(item, nullptr, true);
 			addReplyAction(item);
 				const auto selectedText = getSelectedText();
 			if (!hasCopyRestrictionForSelected() && !selectedText.empty()) {
@@ -3586,6 +3614,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}();
 			addItemActions(item, editItem);
 		} else {
+			const auto photo = (view && view->media()) ? view->media()->photo() : nullptr;
+			addGeminiAction(partItemOrLeader, photo, false);
 			addReplyAction(partItemOrLeader);
 			addTodoListAction(partItemOrLeader);
 			addItemActions(item, albumPartItem);

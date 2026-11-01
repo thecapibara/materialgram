@@ -63,6 +63,24 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		AddSkip(content);
 	}
 
+	// Loading status label
+	const auto statusText = (args.type == GeminiActionType::Translate)
+		? u"Translating with Gemini AI, please wait..."_q
+		: (args.type == GeminiActionType::Summarize)
+		? u"Summarizing with Gemini AI, please wait..."_q
+		: (args.type == GeminiActionType::Ocr)
+		? u"Extracting text with Gemini AI, please wait..."_q
+		: (args.type == GeminiActionType::DescribeImage)
+		? u"Analyzing image with Gemini AI, please wait..."_q
+		: u"Generating with Gemini AI, please wait..."_q;
+
+	const auto statusLabel = box->addRow(
+		object_ptr<FlatLabel>(
+			box,
+			statusText,
+			st::boxLabel),
+		st::boxRowPadding);
+
 	// Loading animation wrap
 	const auto loadingWrap = box->addRow(
 		object_ptr<SlideWrap<RpWidget>>(
@@ -119,17 +137,20 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 	Api::Gemini::RequestOptions requestOptions;
 	switch (args.type) {
 	case GeminiActionType::Summarize:
-		requestOptions.prompt = Api::Gemini::SummarizePrompt(args.inputText);
+		requestOptions.systemInstruction = u"You are a concise summarizer. Summarize the following text clearly and concisely in the same language as the text. Output ONLY the summary without introductory or concluding remarks."_q;
+		requestOptions.prompt = args.inputText;
 		break;
 	case GeminiActionType::Translate: {
 		const auto targetLang = args.targetLanguage.isEmpty()
 			? Api::Gemini::TargetLanguage()
 			: args.targetLanguage;
-		requestOptions.prompt = Api::Gemini::TranslatePrompt(args.inputText, targetLang);
+		requestOptions.systemInstruction = u"You are an expert translator. Translate the following text into %1. Preserve the meaning, formatting, and tone. Output ONLY the raw translated text, without explanations or markdown formatting like quotes or backticks."_q.arg(targetLang);
+		requestOptions.prompt = args.inputText;
 		break;
 	}
 	case GeminiActionType::Ocr:
-		requestOptions.prompt = Api::Gemini::OcrPrompt();
+		requestOptions.systemInstruction = u"You are an expert OCR tool. Extract all visible text from the image accurately. Output ONLY the extracted text with no introductory text or commentary."_q;
+		requestOptions.prompt = u"Extract all visible text from this image."_q;
 		requestOptions.imageBytes = args.imageBytes;
 		requestOptions.imageMimeType = args.imageMimeType;
 		break;
@@ -137,19 +158,22 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		const auto lang = args.targetLanguage.isEmpty()
 			? Api::Gemini::TargetLanguage()
 			: args.targetLanguage;
-		requestOptions.prompt = Api::Gemini::DescribeImagePrompt(lang);
+		requestOptions.systemInstruction = u"Describe the provided image clearly and in detail in %1."_q.arg(lang);
+		requestOptions.prompt = u"Describe this image."_q;
 		requestOptions.imageBytes = args.imageBytes;
 		requestOptions.imageMimeType = args.imageMimeType;
 		break;
 	}
 	case GeminiActionType::CustomQuery:
 	default:
+		requestOptions.useCustomSystemPrompt = true;
 		requestOptions.prompt = args.inputText;
 		break;
 	}
 
 	// Trigger async call
 	Api::Gemini::GenerateContent(std::move(requestOptions), crl::guard(box, [=](Api::Gemini::Response res) {
+		statusLabel->hide();
 		loadingWrap->hide(anim::type::instant);
 
 		if (!res.success) {

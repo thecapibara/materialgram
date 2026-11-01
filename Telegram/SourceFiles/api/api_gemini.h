@@ -31,6 +31,7 @@ struct RequestOptions {
 	std::optional<float64> temperature;
 	QByteArray imageBytes;
 	QString imageMimeType;
+	bool useCustomSystemPrompt = false;
 };
 
 struct Response {
