@@ -3614,7 +3614,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			}();
 			addItemActions(item, editItem);
 		} else {
-			const auto photo = (view && view->media()) ? view->media()->photo() : nullptr;
+			const auto itemMedia = partItemOrLeader ? partItemOrLeader->media() : (item ? item->media() : nullptr);
+			const auto photo = itemMedia ? itemMedia->photo() : nullptr;
 			addGeminiAction(partItemOrLeader, photo, false);
 			addReplyAction(partItemOrLeader);
 			addTodoListAction(partItemOrLeader);
