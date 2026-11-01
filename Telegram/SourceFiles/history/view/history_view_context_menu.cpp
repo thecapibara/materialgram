@@ -833,196 +833,6 @@ bool AddRescheduleAction(
 	return true;
 }
 
-bool AddGeminiActions(GeminiMenuArgs &&args) {
-	if (!Api::Gemini::Enabled()) {
-		return false;
-	}
-
-	const auto item = args.item;
-	const auto photo = args.photo;
-	const auto textForAi = args.textForAi;
-	const auto canSendReply = args.canSendReply;
-	const auto menu = args.menu;
-	const auto controller = args.controller;
-
-	if (!item && !photo && textForAi.trimmed().isEmpty()) {
-		return false;
-	}
-
-	const auto ensureConfigured = [=] {
-		if (!Api::Gemini::IsConfigured()) {
-			controller->showToast(u"Please configure your Gemini API Key first."_q);
-			controller->show(Box(Ui::GeminiSettingsBox));
-			return false;
-		}
-		return true;
-	};
-
-	auto submenu = std::make_unique<Ui::PopupMenu>(menu.get(), menu->st());
-
-	if (canSendReply && !textForAi.trimmed().isEmpty() && args.replyToMessage) {
-		const auto itemId = item ? item->fullId() : FullMsgId();
-		const auto replyCallback = args.replyToMessage;
-		const auto insertCallback = args.insertText;
-		submenu->addAction(u"Reply"_q, [=] {
-			if (!ensureConfigured()) {
-				return;
-			}
-			if (itemId) {
-				replyCallback(itemId);
-			}
-			controller->showToast(u"Generating reply with Gemini AI..."_q);
-
-			Api::Gemini::RequestOptions opt;
-			opt.prompt = textForAi;
-			opt.useCustomSystemPrompt = true;
-			opt.systemInstruction = Api::Gemini::SystemPrompt().isEmpty()
-				? u"You are a helpful assistant. Reply to the message directly, concisely, and naturally in the same language."_q
-				: Api::Gemini::SystemPrompt();
-
-			Api::Gemini::GenerateContent(std::move(opt), crl::guard(controller, [=](Api::Gemini::Response res) {
-				if (res.success) {
-					if (insertCallback) {
-						insertCallback(res.text);
-					}
-					controller->showToast(u"Reply generated with Gemini AI."_q);
-				} else {
-					controller->showToast(u"Gemini Error: %1"_q.arg(res.error));
-				}
-			}));
-		}, &st::menuIconReply);
-	}
-
-	if (!textForAi.trimmed().isEmpty()) {
-		const auto currentTargetLang = Api::Gemini::TargetLanguage();
-		submenu->addAction(u"Translate (%1)"_q.arg(currentTargetLang.toUpper()), [=] {
-			if (!ensureConfigured()) {
-				return;
-			}
-			controller->show(Box(
-				Ui::GeminiResultBox,
-				Ui::GeminiResultBoxArgs{
-					.type = Ui::GeminiActionType::Translate,
-					.inputText = textForAi,
-					.targetLanguage = currentTargetLang,
-				}));
-		}, &st::menuIconTranslate);
-
-		auto translateSubmenu = std::make_unique<Ui::PopupMenu>(submenu.get(), submenu->st());
-		const auto languages = std::vector<std::pair<QString, QString>>{
-			{ u"uk"_q, u"Ukrainian (Українська)"_q },
-			{ u"en"_q, u"English"_q },
-			{ u"de"_q, u"German (Deutsch)"_q },
-			{ u"pl"_q, u"Polish (Polski)"_q },
-			{ u"es"_q, u"Spanish (Español)"_q },
-			{ u"fr"_q, u"French (Français)"_q },
-			{ u"it"_q, u"Italian (Italiano)"_q },
-		};
-		for (const auto &[code, name] : languages) {
-			translateSubmenu->addAction(name, [=] {
-				if (!ensureConfigured()) {
-					return;
-				}
-				Api::Gemini::SetTargetLanguage(code);
-				controller->show(Box(
-					Ui::GeminiResultBox,
-					Ui::GeminiResultBoxArgs{
-						.type = Ui::GeminiActionType::Translate,
-						.inputText = textForAi,
-						.targetLanguage = code,
-					}));
-			});
-		}
-		translateSubmenu->addSeparator();
-		translateSubmenu->addAction(u"Choose Language..."_q, [=] {
-			if (!ensureConfigured()) {
-				return;
-			}
-			const auto currentLangId = LanguageId{ QLocale(currentTargetLang).language() };
-			controller->show(Box(
-				Ui::ChooseLanguageBox,
-				tr::lng_languages(),
-				[=](std::vector<LanguageId> ids) {
-					if (!ids.empty()) {
-						const auto code = ids.front().twoLetterCode();
-						Api::Gemini::SetTargetLanguage(code);
-						controller->show(Box(
-							Ui::GeminiResultBox,
-							Ui::GeminiResultBoxArgs{
-								.type = Ui::GeminiActionType::Translate,
-								.inputText = textForAi,
-								.targetLanguage = code,
-							}));
-					}
-				},
-				std::vector<LanguageId>{ currentLangId },
-				false,
-				nullptr));
-		});
-
-		submenu->addAction(u"Translate into..."_q, std::move(translateSubmenu), &st::menuIconTranslate);
-
-		submenu->addAction(u"Summarize"_q, [=] {
-			if (!ensureConfigured()) {
-				return;
-			}
-			controller->show(Box(
-				Ui::GeminiResultBox,
-				Ui::GeminiResultBoxArgs{
-					.type = Ui::GeminiActionType::Summarize,
-					.inputText = textForAi,
-				}));
-		}, &st::menuIconTranslate);
-	}
-
-	if (photo) {
-		const auto handlePhoto = [=](Ui::GeminiActionType type) {
-			if (!ensureConfigured()) {
-				return;
-			}
-			const auto photoMedia = photo->activeMediaView();
-			if (!photoMedia) {
-				return;
-			}
-			auto bytes = photoMedia->imageBytes(Data::PhotoSize::Large);
-			if (bytes.isEmpty()) {
-				if (const auto img = photoMedia->image(Data::PhotoSize::Large)) {
-					QBuffer buffer(&bytes);
-					buffer.open(QIODevice::WriteOnly);
-					img->original().save(&buffer, "JPEG");
-				}
-			}
-			if (bytes.isEmpty()) {
-				return;
-			}
-			controller->show(Box(
-				Ui::GeminiResultBox,
-				Ui::GeminiResultBoxArgs{
-					.type = type,
-					.imageBytes = bytes,
-					.imageMimeType = u"image/jpeg"_q,
-				}));
-		};
-
-		submenu->addAction(u"Extract Text (OCR)"_q, [=] {
-			handlePhoto(Ui::GeminiActionType::Ocr);
-		}, &st::menuIconTranslate);
-
-		submenu->addAction(u"Describe Image"_q, [=] {
-			handlePhoto(Ui::GeminiActionType::DescribeImage);
-		}, &st::menuIconTranslate);
-	}
-
-	submenu->addSeparator();
-
-	submenu->addAction(u"Settings"_q, [=] {
-		controller->show(Box(Ui::GeminiSettingsBox));
-	}, &st::menuIconSettings);
-
-	menu->addAction(u"Gemini AI"_q, std::move(submenu), &st::menuIconTranslate);
-	return true;
-}
-
 bool AddReplyToMessageAction(
 		not_null<Ui::PopupMenu*> menu,
 		const ContextMenuRequest &request,
@@ -1850,6 +1660,196 @@ void EditTagBox(
 }
 
 } // namespace
+
+bool AddGeminiActions(GeminiMenuArgs &&args) {
+	if (!Api::Gemini::Enabled()) {
+		return false;
+	}
+
+	const auto item = args.item;
+	const auto photo = args.photo;
+	const auto textForAi = args.textForAi;
+	const auto canSendReply = args.canSendReply;
+	const auto menu = args.menu;
+	const auto controller = args.controller;
+
+	if (!item && !photo && textForAi.trimmed().isEmpty()) {
+		return false;
+	}
+
+	const auto ensureConfigured = [=] {
+		if (!Api::Gemini::IsConfigured()) {
+			controller->showToast(u"Please configure your Gemini API Key first."_q);
+			controller->show(Box(Ui::GeminiSettingsBox));
+			return false;
+		}
+		return true;
+	};
+
+	auto submenu = std::make_unique<Ui::PopupMenu>(menu.get(), menu->st());
+
+	if (canSendReply && !textForAi.trimmed().isEmpty() && args.replyToMessage) {
+		const auto itemId = item ? item->fullId() : FullMsgId();
+		const auto replyCallback = args.replyToMessage;
+		const auto insertCallback = args.insertText;
+		submenu->addAction(u"Reply"_q, [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			if (itemId) {
+				replyCallback(itemId);
+			}
+			controller->showToast(u"Generating reply with Gemini AI..."_q);
+
+			Api::Gemini::RequestOptions opt;
+			opt.prompt = textForAi;
+			opt.useCustomSystemPrompt = true;
+			opt.systemInstruction = Api::Gemini::SystemPrompt().isEmpty()
+				? u"You are a helpful assistant. Reply to the message directly, concisely, and naturally in the same language."_q
+				: Api::Gemini::SystemPrompt();
+
+			Api::Gemini::GenerateContent(std::move(opt), crl::guard(controller, [=](Api::Gemini::Response res) {
+				if (res.success) {
+					if (insertCallback) {
+						insertCallback(res.text);
+					}
+					controller->showToast(u"Reply generated with Gemini AI."_q);
+				} else {
+					controller->showToast(u"Gemini Error: %1"_q.arg(res.error));
+				}
+			}));
+		}, &st::menuIconReply);
+	}
+
+	if (!textForAi.trimmed().isEmpty()) {
+		const auto currentTargetLang = Api::Gemini::TargetLanguage();
+		submenu->addAction(u"Translate (%1)"_q.arg(currentTargetLang.toUpper()), [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			controller->show(Box(
+				Ui::GeminiResultBox,
+				Ui::GeminiResultBoxArgs{
+					.type = Ui::GeminiActionType::Translate,
+					.inputText = textForAi,
+					.targetLanguage = currentTargetLang,
+				}));
+		}, &st::menuIconTranslate);
+
+		auto translateSubmenu = std::make_unique<Ui::PopupMenu>(submenu.get(), submenu->st());
+		const auto languages = std::vector<std::pair<QString, QString>>{
+			{ u"uk"_q, u"Ukrainian (Українська)"_q },
+			{ u"en"_q, u"English"_q },
+			{ u"de"_q, u"German (Deutsch)"_q },
+			{ u"pl"_q, u"Polish (Polski)"_q },
+			{ u"es"_q, u"Spanish (Español)"_q },
+			{ u"fr"_q, u"French (Français)"_q },
+			{ u"it"_q, u"Italian (Italiano)"_q },
+		};
+		for (const auto &[code, name] : languages) {
+			translateSubmenu->addAction(name, [=] {
+				if (!ensureConfigured()) {
+					return;
+				}
+				Api::Gemini::SetTargetLanguage(code);
+				controller->show(Box(
+					Ui::GeminiResultBox,
+					Ui::GeminiResultBoxArgs{
+						.type = Ui::GeminiActionType::Translate,
+						.inputText = textForAi,
+						.targetLanguage = code,
+					}));
+			});
+		}
+		translateSubmenu->addSeparator();
+		translateSubmenu->addAction(u"Choose Language..."_q, [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			const auto currentLangId = LanguageId{ QLocale(currentTargetLang).language() };
+			controller->show(Box(
+				Ui::ChooseLanguageBox,
+				tr::lng_languages(),
+				[=](std::vector<LanguageId> ids) {
+					if (!ids.empty()) {
+						const auto code = ids.front().twoLetterCode();
+						Api::Gemini::SetTargetLanguage(code);
+						controller->show(Box(
+							Ui::GeminiResultBox,
+							Ui::GeminiResultBoxArgs{
+								.type = Ui::GeminiActionType::Translate,
+								.inputText = textForAi,
+								.targetLanguage = code,
+							}));
+					}
+				},
+				std::vector<LanguageId>{ currentLangId },
+				false,
+				nullptr));
+		});
+
+		submenu->addAction(u"Translate into..."_q, std::move(translateSubmenu), &st::menuIconTranslate);
+
+		submenu->addAction(u"Summarize"_q, [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			controller->show(Box(
+				Ui::GeminiResultBox,
+				Ui::GeminiResultBoxArgs{
+					.type = Ui::GeminiActionType::Summarize,
+					.inputText = textForAi,
+				}));
+		}, &st::menuIconTranslate);
+	}
+
+	if (photo) {
+		const auto handlePhoto = [=](Ui::GeminiActionType type) {
+			if (!ensureConfigured()) {
+				return;
+			}
+			const auto photoMedia = photo->activeMediaView();
+			if (!photoMedia) {
+				return;
+			}
+			auto bytes = photoMedia->imageBytes(Data::PhotoSize::Large);
+			if (bytes.isEmpty()) {
+				if (const auto img = photoMedia->image(Data::PhotoSize::Large)) {
+					QBuffer buffer(&bytes);
+					buffer.open(QIODevice::WriteOnly);
+					img->original().save(&buffer, "JPEG");
+				}
+			}
+			if (bytes.isEmpty()) {
+				return;
+			}
+			controller->show(Box(
+				Ui::GeminiResultBox,
+				Ui::GeminiResultBoxArgs{
+					.type = type,
+					.imageBytes = bytes,
+					.imageMimeType = u"image/jpeg"_q,
+				}));
+		};
+
+		submenu->addAction(u"Extract Text (OCR)"_q, [=] {
+			handlePhoto(Ui::GeminiActionType::Ocr);
+		}, &st::menuIconTranslate);
+
+		submenu->addAction(u"Describe Image"_q, [=] {
+			handlePhoto(Ui::GeminiActionType::DescribeImage);
+		}, &st::menuIconTranslate);
+	}
+
+	submenu->addSeparator();
+
+	submenu->addAction(u"Settings"_q, [=] {
+		controller->show(Box(Ui::GeminiSettingsBox));
+	}, &st::menuIconSettings);
+
+	menu->addAction(u"Gemini AI"_q, std::move(submenu), &st::menuIconTranslate);
+	return true;
+}
 
 std::optional<QString> CurrentVoiceTimecode(FullMsgId itemId) {
 	const auto state = ::Media::Player::instance()->getState(
