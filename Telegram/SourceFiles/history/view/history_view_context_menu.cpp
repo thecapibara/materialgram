@@ -858,7 +858,8 @@ bool AddGeminiActions(
 	const auto photo = lnkPhoto
 		? lnkPhoto
 		: (media ? media->photo() : nullptr);
-	const auto mediaHasTextForCopy = media && media->hasTextForCopy();
+	const auto viewMedia = request.view ? request.view->media() : nullptr;
+	const auto mediaHasTextForCopy = viewMedia && viewMedia->hasTextForCopy();
 	const auto text = mediaHasTextForCopy
 		? (HistoryView::TransribedText(item).append('\n').append(item->originalText()))
 		: item->originalText();

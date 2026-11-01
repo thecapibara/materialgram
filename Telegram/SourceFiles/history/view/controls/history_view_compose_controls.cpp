@@ -37,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/emoji_suggestions_widget.h"
 #include "chat_helpers/message_field.h"
 #include "chat_helpers/rich_paste_toast.h"
+#include "ui/toast/toast.h"
 #include "chat_helpers/tabbed_panel.h"
 #include "chat_helpers/tabbed_section.h"
 #include "chat_helpers/tabbed_selector.h"

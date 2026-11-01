@@ -457,7 +457,7 @@ HistoryWidget::HistoryWidget(
 		} else if (action.type == SendMenu::ActionType::GeminiChooseLanguage) {
 			chooseGeminiLanguage();
 		} else if (action.type == SendMenu::ActionType::GeminiSettings) {
-			controller()->show(Box(Ui::GeminiSettingsBox));
+			controller->show(Box(Ui::GeminiSettingsBox));
 		} else {
 			sendScheduled(action.options);
 		}
