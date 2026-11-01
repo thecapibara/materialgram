@@ -35,5 +35,10 @@ void AddAfterButtonText(
 	not_null<Ui::RpWidget*> button,
 	rpl::producer<QString> text,
 	const style::SettingsButton &st);
+void AddAfterButtonText(
+	not_null<Ui::RpWidget*> button,
+	rpl::producer<QString> text,
+	const style::SettingsButton &st,
+	rpl::producer<QString> badgeText);
 
 } // namespace Ui::NewBadge

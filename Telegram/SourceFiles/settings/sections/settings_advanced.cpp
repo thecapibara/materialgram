@@ -54,6 +54,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/single_choice_box.h"
 #include "ui/gl/gl_detection.h"
 #include "ui/layers/generic_box.h"
+#include "ui/new_badges.h"
 #include "ui/painter.h"
 #include "ui/platform/ui_platform_window.h"
 #include "ui/power_saving.h"
@@ -1340,16 +1341,27 @@ void BuildMaterialgramSection(SectionBuilder &builder) {
 	if (controller) {
 		const auto gemini = builder.addButton({
 			.id = u"advanced/materialgram_gemini"_q,
-			.title = rpl::single(u"Gemini AI Settings"_q),
+			.title = rpl::single(u"Gemini AI"_q),
 			.st = &st::settingsButtonNoIcon,
-			.label = rpl::single(Api::Gemini::Enabled()
-				? u"Enabled"_q
-				: (Api::Gemini::IsConfigured() ? u"Disabled"_q : u"Set up"_q)),
+			.label = (
+				rpl::single(rpl::empty) | rpl::then(Api::Gemini::Updated())
+			) | rpl::map([=] {
+				return Api::Gemini::Enabled()
+					? u"Enabled"_q
+					: (Api::Gemini::IsConfigured() ? u"Disabled"_q : u"Set up"_q);
+			}),
 			.onClick = [=] {
 				controller->show(Box(Ui::GeminiSettingsBox));
 			},
-			.keywords = { u"gemini"_q, u"ai"_q, u"google"_q },
+			.keywords = { u"gemini"_q, u"ai"_q, u"google"_q, u"beta"_q },
 		});
+		if (gemini) {
+			Ui::NewBadge::AddAfterButtonText(
+				gemini,
+				rpl::single(u"Gemini AI"_q),
+				st::settingsButtonNoIcon,
+				rpl::single(u"Beta"_q));
+		}
 	}
 
 	const auto bypassNoForwards = builder.addButton({

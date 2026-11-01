@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtCore/QByteArray>
 #include <QtCore/QString>
+#include <rpl/producer.h>
 #include <optional>
 #include <vector>
 
@@ -49,6 +50,7 @@ struct ModelInfo {
 [[nodiscard]] bool IsConfigured();
 [[nodiscard]] bool Enabled();
 void SetEnabled(bool enabled);
+[[nodiscard]] rpl::producer<> Updated();
 
 [[nodiscard]] QString ApiKey();
 void SetApiKey(const QString &key);

@@ -834,6 +834,10 @@ bool AddRescheduleAction(
 }
 
 bool AddGeminiActions(GeminiMenuArgs &&args) {
+	if (!Api::Gemini::Enabled()) {
+		return false;
+	}
+
 	const auto item = args.item;
 	const auto photo = args.photo;
 	const auto textForAi = args.textForAi;

@@ -102,9 +102,21 @@ void AddAfterButtonText(
 		not_null<Ui::RpWidget*> button,
 		rpl::producer<QString> text,
 		const style::SettingsButton &st) {
+	AddAfterButtonText(
+		button,
+		std::move(text),
+		st,
+		tr::lng_premium_summary_new_badge());
+}
+
+void AddAfterButtonText(
+		not_null<Ui::RpWidget*> button,
+		rpl::producer<QString> text,
+		const style::SettingsButton &st,
+		rpl::producer<QString> badgeText) {
 	const auto badge = CreateNewBadge(
 		button,
-		tr::lng_premium_summary_new_badge());
+		std::move(badgeText));
 	rpl::combine(
 		std::move(text),
 		button->widthValue()

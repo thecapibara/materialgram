@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/core_settings.h"
 
+#include <rpl/event_stream.h>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
@@ -33,7 +34,16 @@ namespace {
 	return model;
 }
 
+[[nodiscard]] rpl::event_stream<> &UpdatedStream() {
+	static rpl::event_stream<> stream;
+	return stream;
+}
+
 } // namespace
+
+rpl::producer<> Updated() {
+	return UpdatedStream().events();
+}
 
 bool IsConfigured() {
 	return !ApiKey().trimmed().isEmpty();
@@ -47,6 +57,7 @@ bool Enabled() {
 void SetEnabled(bool enabled) {
 	Core::App().settings().writePref<bool>(kPrefEnabled, enabled);
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 QString ApiKey() {
@@ -56,6 +67,7 @@ QString ApiKey() {
 void SetApiKey(const QString &key) {
 	Core::App().settings().writePref<QString>(kPrefApiKey, key.trimmed());
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 QString Model() {
@@ -66,6 +78,7 @@ QString Model() {
 void SetModel(const QString &model) {
 	Core::App().settings().writePref<QString>(kPrefModel, CleanModelName(model));
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 QString SystemPrompt() {
@@ -75,6 +88,7 @@ QString SystemPrompt() {
 void SetSystemPrompt(const QString &prompt) {
 	Core::App().settings().writePref<QString>(kPrefSystemPrompt, prompt);
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 float64 Temperature() {
@@ -86,6 +100,7 @@ void SetTemperature(float64 temperature) {
 	const auto value = int(std::round(std::clamp(temperature, 0.0, 1.0) * 10));
 	Core::App().settings().writePref<int>(kPrefTemperature, value);
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 QString TargetLanguage() {
@@ -95,6 +110,7 @@ QString TargetLanguage() {
 void SetTargetLanguage(const QString &lang) {
 	Core::App().settings().writePref<QString>(kPrefTargetLanguage, lang);
 	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
 }
 
 void GenerateContent(
