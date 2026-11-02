@@ -25,6 +25,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
       - name: Pull Docker build environment
         run: |
           docker pull ghcr.io/telegramdesktop/tdesktop/centos_env
@@ -32,6 +40,7 @@ jobs:
 
       - name: Build Materialgram
         run: |
+          mkdir -p .ccache
           API_ID="${{ secrets.API_ID }}"
           API_HASH="${{ secrets.API_HASH }}"
           if [ -z "$API_ID" ] || [ -z "$API_HASH" ]; then
@@ -45,6 +54,7 @@ jobs:
           docker run --rm \
             -u $(id -u) \
             -e KEEP_GOING=1 \
+            -e CCACHE_DIR=/usr/src/tdesktop/.ccache \
             -v $PWD:/usr/src/tdesktop \
             $IMAGE_TAG \
             /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \

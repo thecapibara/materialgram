@@ -27,6 +27,9 @@ compile_commands.json
 /Telegram/data
 /Telegram/data_config
 /Telegram/DebugLogs/
+/.ccache/
+/build-test/
+
 /Telegram/tdata/
 /Telegram/tdumps/
 
