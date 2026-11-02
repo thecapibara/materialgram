@@ -17,7 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Api::Gemini {
 
-inline constexpr auto kDefaultModel = "gemini-1.5-flash";
+inline constexpr auto kDefaultModel = "gemini-3.5-flash-lite";
 inline constexpr auto kPrefApiKey = "gemini_api_key";
 inline constexpr auto kPrefModel = "gemini_model";
 inline constexpr auto kPrefSystemPrompt = "gemini_system_prompt";
