@@ -208,16 +208,6 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 			}
 		}
 		if (bytes.isEmpty()) {
-			document->save(item->fullId(), QString(), LoadFromCloudOrLocal, true);
-			const auto lifetime = std::make_shared<rpl::lifetime>();
-			document->session().downloaderTaskFinished(
-			) | rpl::start_with_next([=] {
-				const auto path = document->filepath(true);
-				if (!path.isEmpty()) {
-					lifetime->destroy();
-					loadFromGemini();
-				}
-			}, *lifetime);
 			return;
 		}
 		auto &entry = _map.emplace(id).first->second;

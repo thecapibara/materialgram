@@ -90,6 +90,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
 #include "data/data_document.h"
+#include "data/data_document_media.h"
+#include "data/data_file_origin.h"
 #include "data/data_media_types.h"
 #include "data/data_poll.h"
 #include "data/data_forum_topic.h"
@@ -1899,13 +1901,13 @@ bool AddGeminiActions(GeminiMenuArgs &&args) {
 			}
 
 			controller->showToast(u"Downloading audio for transcription..."_q);
-			document->save(item->fullId(), QString(), LoadFromCloudOrLocal, true);
-			const auto lifetime = std::make_shared<rpl::lifetime>();
+			document->save(Data::FileOrigin(item->fullId()), QString(), LoadFromCloudOrLocal, true);
 			document->session().downloaderTaskFinished(
-			) | rpl::start_with_next([=] {
+			) | rpl::filter([=] {
+				return !readBytes().isEmpty();
+			}) | rpl::take(1) | rpl::on_next([=] {
 				const auto downloaded = readBytes();
 				if (!downloaded.isEmpty()) {
-					lifetime->destroy();
 					controller->show(Box(
 						Ui::GeminiResultBox,
 						Ui::GeminiResultBoxArgs{
@@ -1914,7 +1916,7 @@ bool AddGeminiActions(GeminiMenuArgs &&args) {
 							.imageMimeType = mime,
 						}));
 				}
-			}, *lifetime);
+			}, controller->lifetime());
 		};
 
 		submenu->addAction(u"Transcribe Audio"_q, handleAudio, &st::menuIconSoundOn);
