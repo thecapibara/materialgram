@@ -1673,7 +1673,13 @@ bool AddGeminiActions(GeminiMenuArgs &&args) {
 	const auto menu = args.menu;
 	const auto controller = args.controller;
 
-	if (!item && !photo && textForAi.trimmed().isEmpty()) {
+	const auto media = item ? item->media() : nullptr;
+	const auto document = media ? media->document() : nullptr;
+	const auto isAudioOrVoice = document
+		&& (document->isVoiceMessage() || document->isAudioFile() || document->isVideoMessage());
+
+	const auto hasText = !textForAi.trimmed().isEmpty();
+	if (!hasText && !photo && !isAudioOrVoice) {
 		return false;
 	}
 
@@ -1839,6 +1845,66 @@ bool AddGeminiActions(GeminiMenuArgs &&args) {
 		submenu->addAction(u"Describe Image"_q, [=] {
 			handlePhoto(Ui::GeminiActionType::DescribeImage);
 		}, &st::menuIconTranslate);
+	}
+
+	if (isAudioOrVoice) {
+		const auto handleAudio = [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			const auto readBytes = [=]() -> QByteArray {
+				const auto mediaView = document->activeMediaView();
+				if (mediaView && !mediaView->bytes().isEmpty()) {
+					return mediaView->bytes();
+				}
+				const auto path = document->filepath(true);
+				if (!path.isEmpty()) {
+					QFile f(path);
+					if (f.open(QIODevice::ReadOnly)) {
+						return f.readAll();
+					}
+				}
+				return {};
+			};
+
+			const auto bytes = readBytes();
+			const auto mime = document->isVoiceMessage()
+				? u"audio/ogg"_q
+				: document->isVideoMessage()
+				? u"video/mp4"_q
+				: (document->mimeString().isEmpty() ? u"audio/ogg"_q : document->mimeString());
+
+			if (!bytes.isEmpty()) {
+				controller->show(Box(
+					Ui::GeminiResultBox,
+					Ui::GeminiResultBoxArgs{
+						.type = Ui::GeminiActionType::TranscribeAudio,
+						.imageBytes = bytes,
+						.imageMimeType = mime,
+					}));
+				return;
+			}
+
+			controller->showToast(u"Downloading audio for transcription..."_q);
+			document->save(item->fullId(), QString(), LoadFromCloudOrLocal, true);
+			const auto lifetime = std::make_shared<rpl::lifetime>();
+			document->session().downloaderTaskFinished(
+			) | rpl::start_with_next([=] {
+				const auto downloaded = readBytes();
+				if (!downloaded.isEmpty()) {
+					lifetime->destroy();
+					controller->show(Box(
+						Ui::GeminiResultBox,
+						Ui::GeminiResultBoxArgs{
+							.type = Ui::GeminiActionType::TranscribeAudio,
+							.imageBytes = downloaded,
+							.imageMimeType = mime,
+						}));
+				}
+			}, *lifetime);
+		};
+
+		submenu->addAction(u"Transcribe Audio"_q, handleAudio, &st::menuIconSoundOn);
 	}
 
 	submenu->addSeparator();

@@ -35,6 +35,8 @@ namespace {
 		return u"Gemini AI: Extracted Text (OCR)"_q;
 	case GeminiActionType::DescribeImage:
 		return u"Gemini AI: Image Description"_q;
+	case GeminiActionType::TranscribeAudio:
+		return u"Gemini AI: Audio Transcription"_q;
 	case GeminiActionType::CustomQuery:
 	default:
 		return u"Gemini AI"_q;
@@ -72,6 +74,8 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		? u"Extracting text with Gemini AI, please wait..."_q
 		: (args.type == GeminiActionType::DescribeImage)
 		? u"Analyzing image with Gemini AI, please wait..."_q
+		: (args.type == GeminiActionType::TranscribeAudio)
+		? u"Transcribing audio with Gemini AI, please wait..."_q
 		: u"Generating with Gemini AI, please wait..."_q;
 
 	const auto statusLabel = box->addRow(
@@ -164,6 +168,12 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		requestOptions.imageMimeType = args.imageMimeType;
 		break;
 	}
+	case GeminiActionType::TranscribeAudio:
+		requestOptions.systemInstruction = u"You are an expert speech-to-text transcriber. Transcribe the spoken audio verbatim in its original language. Output ONLY the transcription text without commentary, timestamps, or quotation marks."_q;
+		requestOptions.prompt = u"Transcribe this audio verbatim in its original language."_q;
+		requestOptions.imageBytes = args.imageBytes;
+		requestOptions.imageMimeType = args.imageMimeType;
+		break;
 	case GeminiActionType::CustomQuery:
 	default:
 		requestOptions.useCustomSystemPrompt = true;

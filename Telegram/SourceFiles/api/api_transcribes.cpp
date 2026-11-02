@@ -208,6 +208,16 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 			}
 		}
 		if (bytes.isEmpty()) {
+			document->save(item->fullId(), QString(), LoadFromCloudOrLocal, true);
+			const auto lifetime = std::make_shared<rpl::lifetime>();
+			document->session().downloaderTaskFinished(
+			) | rpl::start_with_next([=] {
+				const auto path = document->filepath(true);
+				if (!path.isEmpty()) {
+					lifetime->destroy();
+					loadFromGemini();
+				}
+			}, *lifetime);
 			return;
 		}
 		auto &entry = _map.emplace(id).first->second;
@@ -219,7 +229,9 @@ void Transcribes::load(not_null<HistoryItem*> item) {
 		opt.systemInstruction = u"You are an accurate speech-to-text transcriber. Transcribe the spoken audio verbatim in its original language without translating or adding commentary."_q;
 		opt.prompt = u"Transcribe this audio."_q;
 		opt.imageBytes = bytes;
-		opt.imageMimeType = u"audio/ogg"_q;
+		opt.imageMimeType = document->isVideoMessage()
+			? u"video/mp4"_q
+			: (document->mimeString().isEmpty() ? u"audio/ogg"_q : document->mimeString());
 		Api::Gemini::GenerateContent(std::move(opt), [=](Api::Gemini::Response res) {
 			auto &entry = _map[id];
 			entry.pending = false;
