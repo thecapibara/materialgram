@@ -18,6 +18,7 @@ enum class GeminiActionType {
 	Ocr,
 	DescribeImage,
 	TranscribeAudio,
+	ImproveText,
 	CustomQuery,
 };
 

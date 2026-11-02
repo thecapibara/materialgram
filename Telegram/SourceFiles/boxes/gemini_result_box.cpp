@@ -37,6 +37,8 @@ namespace {
 		return u"Gemini AI: Image Description"_q;
 	case GeminiActionType::TranscribeAudio:
 		return u"Gemini AI: Audio Transcription"_q;
+	case GeminiActionType::ImproveText:
+		return u"Gemini AI: Improved Text"_q;
 	case GeminiActionType::CustomQuery:
 	default:
 		return u"Gemini AI"_q;
@@ -76,6 +78,8 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		? u"Analyzing image with Gemini AI, please wait..."_q
 		: (args.type == GeminiActionType::TranscribeAudio)
 		? u"Transcribing audio with Gemini AI, please wait..."_q
+		: (args.type == GeminiActionType::ImproveText)
+		? u"Improving text with Gemini AI, please wait..."_q
 		: u"Generating with Gemini AI, please wait..."_q;
 
 	const auto statusLabel = box->addRow(
@@ -173,6 +177,10 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 		requestOptions.prompt = u"Transcribe this audio verbatim in its original language."_q;
 		requestOptions.imageBytes = args.imageBytes;
 		requestOptions.imageMimeType = args.imageMimeType;
+		break;
+	case GeminiActionType::ImproveText:
+		requestOptions.systemInstruction = u"You are an expert editor. Improve the following text by fixing spelling, grammar, punctuation, and awkward phrasing in its original language. Preserve the original language, tone, and intended meaning. Output ONLY the improved text without quotation marks, introductions, or explanations."_q;
+		requestOptions.prompt = args.inputText;
 		break;
 	case GeminiActionType::CustomQuery:
 	default:

@@ -1807,6 +1807,19 @@ bool AddGeminiActions(GeminiMenuArgs &&args) {
 					.inputText = textForAi,
 				}));
 		}, &st::menuIconTranslate);
+
+		submenu->addAction(u"Improve Text"_q, [=] {
+			if (!ensureConfigured()) {
+				return;
+			}
+			controller->show(Box(
+				Ui::GeminiResultBox,
+				Ui::GeminiResultBoxArgs{
+					.type = Ui::GeminiActionType::ImproveText,
+					.inputText = textForAi,
+					.applyToDraft = args.insertText,
+				}));
+		}, &st::menuIconEdit);
 	}
 
 	if (photo) {
