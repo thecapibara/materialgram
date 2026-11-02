@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/core_settings.h"
 
+#include <memory>
 #include <rpl/event_stream.h>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
@@ -56,6 +57,16 @@ bool Enabled() {
 
 void SetEnabled(bool enabled) {
 	Core::App().settings().writePref<bool>(kPrefEnabled, enabled);
+	Core::App().saveSettingsDelayed();
+	UpdatedStream().fire({});
+}
+
+bool StreamResponses() {
+	return Core::App().settings().readPref<bool>(kPrefStreamResponses, true);
+}
+
+void SetStreamResponses(bool stream) {
+	Core::App().settings().writePref<bool>(kPrefStreamResponses, stream);
 	Core::App().saveSettingsDelayed();
 	UpdatedStream().fire({});
 }
@@ -127,11 +138,13 @@ void GenerateContent(
 		return;
 	}
 
+	const auto useStreaming = options.streamCallback && StreamResponses();
 	const auto model = options.modelOverride.isEmpty()
 		? Model()
 		: CleanModelName(options.modelOverride);
-	const auto urlString = u"https://generativelanguage.googleapis.com/v1beta/models/%1:generateContent?key=%2"_q
-		.arg(model, key);
+	const auto urlString = useStreaming
+		? u"https://generativelanguage.googleapis.com/v1beta/models/%1:streamGenerateContent?alt=sse&key=%2"_q.arg(model, key)
+		: u"https://generativelanguage.googleapis.com/v1beta/models/%1:generateContent?key=%2"_q.arg(model, key);
 
 	auto request = QNetworkRequest(QUrl(urlString));
 	request.setHeader(QNetworkRequest::ContentTypeHeader, u"application/json"_q);
@@ -202,6 +215,120 @@ void GenerateContent(
 
 	const auto body = QJsonDocument(root).toJson(QJsonDocument::Compact);
 	auto *reply = NetworkManager()->post(request, body);
+
+	if (useStreaming) {
+		auto streamBuffer = std::make_shared<QByteArray>();
+		auto accumulatedText = std::make_shared<QString>();
+		auto streamError = std::make_shared<QString>();
+		const auto streamCallback = options.streamCallback;
+
+		QObject::connect(reply, &QNetworkReply::readyRead, [reply, streamBuffer, accumulatedText, streamError, streamCallback] {
+			streamBuffer->append(reply->readAll());
+			while (true) {
+				const auto newlinePos = streamBuffer->indexOf('\n');
+				if (newlinePos < 0) {
+					break;
+				}
+				auto line = streamBuffer->left(newlinePos).trimmed();
+				streamBuffer->remove(0, newlinePos + 1);
+
+				if (!line.startsWith("data:")) {
+					continue;
+				}
+				const auto jsonBytes = line.mid(5).trimmed();
+				if (jsonBytes.isEmpty()) {
+					continue;
+				}
+				const auto doc = QJsonDocument::fromJson(jsonBytes);
+				if (doc.object().contains(u"error"_q)) {
+					const auto errObj = doc.object()[u"error"_q].toObject();
+					*streamError = errObj[u"message"_q].toString();
+					continue;
+				}
+				const auto candidates = doc.object()[u"candidates"_q].toArray();
+				if (candidates.isEmpty()) {
+					continue;
+				}
+				const auto first = candidates[0].toObject();
+				const auto parts = first[u"content"_q].toObject()[u"parts"_q].toArray();
+				for (const auto &part : parts) {
+					const auto chunk = part.toObject()[u"text"_q].toString();
+					if (!chunk.isEmpty()) {
+						accumulatedText->append(chunk);
+					}
+				}
+				if (streamCallback && !accumulatedText->isEmpty()) {
+					streamCallback(*accumulatedText);
+				}
+			}
+		});
+
+		QObject::connect(reply, &QNetworkReply::finished, [reply, streamBuffer, accumulatedText, streamError, callback = std::move(callback)] {
+			const auto status = reply->attribute(
+				QNetworkRequest::HttpStatusCodeAttribute).toInt();
+			reply->deleteLater();
+
+			if (!callback) {
+				return;
+			}
+
+			if (!streamBuffer->isEmpty()) {
+				auto line = streamBuffer->trimmed();
+				if (line.startsWith("data:")) {
+					const auto jsonBytes = line.mid(5).trimmed();
+					if (!jsonBytes.isEmpty()) {
+						const auto doc = QJsonDocument::fromJson(jsonBytes);
+						if (doc.object().contains(u"error"_q)) {
+							const auto errObj = doc.object()[u"error"_q].toObject();
+							*streamError = errObj[u"message"_q].toString();
+						} else {
+							const auto candidates = doc.object()[u"candidates"_q].toArray();
+							if (!candidates.isEmpty()) {
+								const auto parts = candidates[0].toObject()[u"content"_q].toObject()[u"parts"_q].toArray();
+								for (const auto &part : parts) {
+									accumulatedText->append(part.toObject()[u"text"_q].toString());
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if (status < 200 || status >= 300) {
+				if (accumulatedText->isEmpty()) {
+					callback({
+						.error = streamError->isEmpty()
+							? u"HTTP Error %1"_q.arg(status)
+							: *streamError,
+						.success = false,
+					});
+					return;
+				}
+			}
+
+			if (!streamError->isEmpty() && accumulatedText->isEmpty()) {
+				callback({
+					.error = *streamError,
+					.success = false,
+				});
+				return;
+			}
+
+			if (accumulatedText->isEmpty()) {
+				callback({
+					.error = u"Empty response content."_q,
+					.success = false,
+				});
+				return;
+			}
+
+			callback({
+				.text = accumulatedText->trimmed(),
+				.success = true,
+			});
+		});
+		return;
+	}
 
 	QObject::connect(reply, &QNetworkReply::finished, [reply, callback = std::move(callback)] {
 		const auto status = reply->attribute(

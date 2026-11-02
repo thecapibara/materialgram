@@ -23,6 +23,7 @@ inline constexpr auto kPrefModel = "gemini_model";
 inline constexpr auto kPrefSystemPrompt = "gemini_system_prompt";
 inline constexpr auto kPrefTemperature = "gemini_temperature";
 inline constexpr auto kPrefEnabled = "gemini_enabled";
+inline constexpr auto kPrefStreamResponses = "gemini_stream_responses";
 inline constexpr auto kPrefTargetLanguage = "gemini_target_lang";
 
 struct RequestOptions {
@@ -33,6 +34,7 @@ struct RequestOptions {
 	QByteArray imageBytes;
 	QString imageMimeType;
 	bool useCustomSystemPrompt = false;
+	Fn<void(const QString &accumulatedText)> streamCallback;
 };
 
 struct Response {
@@ -50,6 +52,8 @@ struct ModelInfo {
 [[nodiscard]] bool IsConfigured();
 [[nodiscard]] bool Enabled();
 void SetEnabled(bool enabled);
+[[nodiscard]] bool StreamResponses();
+void SetStreamResponses(bool stream);
 [[nodiscard]] rpl::producer<> Updated();
 
 [[nodiscard]] QString ApiKey();

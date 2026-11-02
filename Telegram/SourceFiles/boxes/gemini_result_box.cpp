@@ -172,15 +172,24 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 	}
 
 	// Trigger async call
+	requestOptions.streamCallback = crl::guard(box, [=](const QString &text) {
+		statusLabel->hide();
+		loadingWrap->hide(anim::type::instant);
+		state->currentResult = text;
+		resultLabelWrap->entity()->setText(text);
+		resultLabelWrap->show(anim::type::instant);
+	});
+
 	Api::Gemini::GenerateContent(std::move(requestOptions), crl::guard(box, [=](Api::Gemini::Response res) {
 		statusLabel->hide();
 		loadingWrap->hide(anim::type::instant);
 
 		if (!res.success) {
-			state->currentResult.clear();
-			resultLabelWrap->entity()->setText(
-				u"Gemini Error: %1"_q.arg(res.error));
-			resultLabelWrap->show(anim::type::instant);
+			if (state->currentResult.isEmpty()) {
+				resultLabelWrap->entity()->setText(
+					u"Gemini Error: %1"_q.arg(res.error));
+				resultLabelWrap->show(anim::type::instant);
+			}
 			return;
 		}
 

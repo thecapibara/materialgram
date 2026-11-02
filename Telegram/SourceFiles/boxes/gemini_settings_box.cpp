@@ -57,6 +57,14 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 			st::defaultBoxCheckbox),
 		st::boxRowPadding);
 
+	const auto streamCheckbox = box->addRow(
+		object_ptr<Checkbox>(
+			box,
+			u"Stream responses in real-time"_q,
+			Api::Gemini::StreamResponses(),
+			st::defaultBoxCheckbox),
+		st::boxRowPadding);
+
 	AddSkip(content);
 
 	// API Key
@@ -190,6 +198,7 @@ void GeminiSettingsBox(not_null<GenericBox*> box) {
 		}
 		Api::Gemini::SetSystemPrompt(prompt);
 		Api::Gemini::SetTemperature(tempVal);
+		Api::Gemini::SetStreamResponses(streamCheckbox->checked());
 		Api::Gemini::SetEnabled(enabled);
 
 		Toast::Show(box, u"Gemini AI settings saved."_q);
