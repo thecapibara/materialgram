@@ -55,7 +55,7 @@ jobs:
             -u $(id -u) \
             -e KEEP_GOING=1 \
             -e CCACHE_DIR=/usr/src/tdesktop/.ccache \
-            -e CCACHE_DISABLE=0 \
+            -e CCACHE_DISABLE=false \
             -v $PWD:/usr/src/tdesktop \
             $IMAGE_TAG \
             /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
