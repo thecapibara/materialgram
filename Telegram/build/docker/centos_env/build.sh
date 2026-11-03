@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+unset CCACHE_DISABLE
+
 cd Telegram
 ./configure.sh "$@"
 # KEEP_GOING=1 lets ninja report every failing translation unit in one
