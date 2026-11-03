@@ -45,6 +45,26 @@ namespace {
 	}
 }
 
+[[nodiscard]] QString ResultSectionTitle(GeminiActionType type) {
+	switch (type) {
+	case GeminiActionType::Summarize:
+		return u"Summary"_q;
+	case GeminiActionType::Translate:
+		return u"Translation"_q;
+	case GeminiActionType::Ocr:
+		return u"Extracted Text"_q;
+	case GeminiActionType::DescribeImage:
+		return u"Image Description"_q;
+	case GeminiActionType::TranscribeAudio:
+		return u"Audio Transcription"_q;
+	case GeminiActionType::ImproveText:
+		return u"Improved Text"_q;
+	case GeminiActionType::CustomQuery:
+	default:
+		return u"Response"_q;
+	}
+}
+
 } // namespace
 
 void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
@@ -53,19 +73,24 @@ void GeminiResultBox(not_null<GenericBox*> box, GeminiResultBoxArgs &&args) {
 
 	const auto content = box->verticalLayout();
 
-	// If there's an original text snippet, show a subtle header
+	// If there's an original text snippet, show a distinct section
 	if (!args.inputText.isEmpty() && args.type != GeminiActionType::CustomQuery) {
-		const auto snippet = args.inputText.length() > 140
-			? (args.inputText.left(140) + u"..."_q)
+		const auto snippet = args.inputText.length() > 160
+			? (args.inputText.left(160) + u"..."_q)
 			: args.inputText;
+		AddSubsectionTitle(content, rpl::single(u"Original"_q));
 		box->addRow(
 			object_ptr<FlatLabel>(
 				box,
-				u"Original: %1"_q.arg(snippet),
-				st::aboutLabel),
+				snippet,
+				st::boxLabel),
 			st::boxRowPadding);
 		AddSkip(content);
+		AddDivider(content);
+		AddSkip(content);
 	}
+
+	AddSubsectionTitle(content, rpl::single(ResultSectionTitle(args.type)));
 
 	// Loading status label
 	const auto statusText = (args.type == GeminiActionType::Translate)
